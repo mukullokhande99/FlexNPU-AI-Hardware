@@ -2,53 +2,63 @@
 
 [![CI](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml)
 
-This repo is a **student slice of an ongoing FlexNPU research
-project**, packaged for the AI Hardware course. It exposes the parts
-of the platform students can use for architecture-aware research on
-a Linux host — the mechanistic simulator, the C++ event-driven
-simulator, the RTL, real workload traces, and a lightweight roofline
-model. Everything runs without an FPGA, a board, or a vendor toolchain.
-
-## The larger platform and where you plug in
-
-The full FlexNPU pipeline goes from an ONNX model through a compiler
-and runtime and executes on a physical Kria FPGA prototype. The
-compiler, the runtime, and the physical deployment path stay in the
-research repo. This student release ships everything else — the RTL,
-the mechanistic and C++ simulators, the roofline model, and the
-operator traces — so you can answer real questions using the same RTL
-and the same workload shapes that end up on the physical prototype.
-
-Students plug into the pipeline by forking this repo, working in
-their fork, and opening a PR back:
+FlexNPU is a full-stack accelerator research platform: real ONNX
+models go through graph and operator analysis, workload realization,
+analytical and cycle-level modeling, RTL, an FPGA implementation, and
+end-to-end execution on a physical Kria FPGA prototype under a real
+host runtime. This repo is the **student slice** of that stack —
+enough to do real architecture- and mapping-aware research on the
+same RTL and workload shapes the platform runs.
 
 ```
-FlexNPU research pipeline (owned by the research repo)
-──────────────────────────────────────────────────────
-
-    ONNX model
-       │  operator extraction / site metadata
+    Real models / ONNX
+       │
        ▼
-    trace files ─────────────────────────────┐
-       │                                     │
-       ▼                                     │
-    mechanistic sim + C++ sim + roofline     │
-       │                                     │
-       ▼                                     │      What students do
-    RTL ─────────────────────────────────────┤      ────────────────
-       │                                     │      1. fork this repo
-       │  bitstream + runtime                │      2. work in your fork
-       ▼                                     │      3. open a PR back
-    physical Kria FPGA prototype ────────────┘      4. results we can
-                                                       reproduce may
-                                                       flow into the
-                                                       research repo
+    operator + graph analysis                          ┐
+       │  (quantization, operator coverage, shapes)    │
+       ▼                                               │  research
+    workload realization                               │  repo
+       │  (mapping, tiling, persistence, split-K)      │
+       ▼                                               ┘
+    analytical / roofline modeling                     ┐
+       │                                               │
+       ▼                                               │
+    event-driven C++ simulator                         │
+       │  (architecture + mapping + resource behavior) │  student
+       ▼                                               │  release
+    CTB mechanistic model                              │  (this repo)
+       │  (service / buffering / bottleneck behavior)  │
+       ▼                                               │
+    RTL  ─────────►  optional synthesis / PPA          │
+       │  (correctness + cycle-level validation)       │
+       ▼                                               ┘
+    FPGA implementation                                ┐
+       │                                               │
+       ▼                                               │  research
+    physical Kria FPGA prototype                       │  repo
+       │                                               │
+       ▼                                               │
+    host runtime + end-to-end workloads                │
+       (counters, latency, realized system behavior)   ┘
 ```
 
-The middle band — traces + simulators + RTL — is what you see and
-work with in this repo. The compiler and runtime on either side are
-what turn your work into (and out of) something running on the
-physical prototype.
+## The design space
+
+FlexNPU is exploring interactions across:
+
+    workload × architecture × mapping / dataflow
+    × resource provisioning × operator realization
+    × runtime / system realization
+
+Concrete axes include array geometry, `K_TILE` and other execution-
+granularity knobs, FIFO / SRAM capacity, credit / outstanding-work
+depth, service organization, tiling, loop order, split-K,
+persistence / reuse, materialization, and precision. Student
+projects here focus on the **architecture / resource** and
+**mapping / dataflow** axes on the middle of the stack; interesting
+findings can be taken further through the FPGA and runtime layers
+in the research repo. Students work in their own fork of this repo
+and open a PR back when they're done.
 
 ## Two research directions
 
