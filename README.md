@@ -1,60 +1,92 @@
-# FlexNPU-AI-Hardware (v0.1)
+# FlexNPU-AI-Hardware
 
 [![CI](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml)
 
-A minimal, real-hardware student platform for the "AI Hardware" course.
-Extracted from the canonical FlexNPU research repo. Runs entirely on a
-Linux host — no FPGA, no board, no vendor toolchain.
+Student release of the FlexNPU research platform, used for the AI Hardware
+course. Runs entirely on a Linux host — no FPGA, no board, no vendor
+toolchain — and pairs a mechanistic Python simulator with the actual
+SystemVerilog RTL under automated regression.
 
-## What you get
+The platform is set up for open-ended work on accelerator architecture,
+resource provisioning, performance modeling, mapping, and dataflow. You
+get real cycle-accurate RTL, a fast mechanistic model that can be swept
+over thousands of design points in seconds, and operator traces
+extracted from real MobileBERT and MobileNetV2 models.
 
-- **Real RTL** — the FlexNPU CTB compute path (`rtl/`), simulated with
-  iverilog and Verilator. Byte-exact GEMM correctness gate.
-- **A cycle-accurate Python mechanism model** (`simulator/ctb_mech/`) of
-  the CTB service pipeline (producer FSM, credit, per-row FIFOs, drain
-  FSM).
-- **A minimal roofline layer** (`analysis/roofline.py`) for analytical
-  compute-vs-bandwidth bounds.
-- **A one-YAML config bridge** (`tools/config_bridge.py`) that
-  translates one `configs/ctb/*.yaml` into both iverilog `-P` overrides
-  and Python `CTBParams`.
-- **Prepared workload traces** for MobileBERT and MobileNetV2 (shape
-  metadata only; INT8-quantized site descriptors).
-- **Bounded-freedom project workflow** — see `PROJECT_GUIDE.md`.
+## What you'll do
 
-## Prerequisites
+You'll be assigned to a project group. Each group:
 
-```bash
-sudo apt install iverilog verilator
-python3 -m pip install -r requirements.txt   # onnx not required in v0.1
+1. Forks this repo and works in the fork.
+2. Picks a research question from `PROJECT_IDEAS.md` (or proposes an
+   adjacent one).
+3. Writes down a concrete hypothesis or prediction before touching code.
+4. Explores broadly in the mechanistic simulator — dozens or hundreds
+   of points is normal.
+5. Validates a small, well-chosen subset in RTL and against the provided
+   workload traces.
+6. Writes up *why* the observed behavior happens — the story matters
+   more than the number.
+7. Opens a pull request from the fork back to this course repo for
+   the final submission.
+
+`PROJECT_GUIDE.md` has the full workflow, rubric, and what a submission
+looks like.
+
+## Quick start
+
+```
+pip install -r requirements.txt
+make onboarding
 ```
 
-Any Linux host works. No `/dev/mem`, no root, no board.
+`make onboarding` runs:
 
-## Quickstart
+- the mechanistic simulator's regression tests (`simulator/ctb_mech/`);
+- byte-exact Verilator GEMM correctness for `rtl/compute_tile_bram.sv`;
+- an Icarus Verilog run of the CTB regime testbench;
+- simulator-vs-RTL parity for a canonical `(K, D)` point.
 
-```bash
-make check              # tools present + 8/8 ctb_mech regressions pass
-make ctb_correctness    # Verilator: byte-exact GEMM matches numpy reference
-make ctb_eval           # iverilog: run regime TB at K=1024, D=3
-make regime_walk        # Python: sweep K over the four service regimes
-make parity             # Python + iverilog: sim vs RTL, side by side
-make workload_replay    # Python: replay MobileBERT trace through ctb_mech
-```
+If all four are green you're ready to work.
 
-## Layout
+## Project directions
 
-- `rtl/` — 5 SystemVerilog files (mac, fifo, systolic, mm, compute_tile_bram).
-- `tb/` — regime TB (iverilog) + correctness TB (Verilator).
-- `configs/arch/` — architectural manifests (16x16 baseline + 8x8 variant).
-- `configs/ctb/baseline.yaml` — the CTB runtime knobs a student edits.
-- `simulator/ctb_mech/` — Python mechanistic simulator + 8 regression tests.
-- `analysis/roofline.py` — analytical compute/bandwidth bound.
-- `tools/config_bridge.py` — YAML → both simulators, one source of truth.
-- `workloads/` — synthetic generator + MobileBERT + MobileNetV2 traces.
-- `examples/` — four short scripts wiring the pieces together.
-- `docs/` — architecture overview, mechanism story, RTL/TB walkthrough.
-- `PROJECT_GUIDE.md` — student workflow, onboarding exercise, rubric.
-- `PROJECT_IDEAS.md` — Lane A and Lane B seed questions.
+Two broad lanes; concrete starter questions live in `PROJECT_IDEAS.md`.
 
-- 
+- **NPU realization and resource co-design** — decoupling depth, FIFO
+  capacity, drain policy, array shape, and the interactions between
+  them. Predict from the mechanistic model, then falsify in RTL.
+- **Performance modeling, mapping, and dataflow** — turn a workload's
+  operator/tile trace into an execution schedule, model the resulting
+  service and stall structure, and evaluate on real MobileBERT /
+  MobileNetV2 shape distributions.
+
+You are not restricted to these; adjacent questions grounded in the
+same platform are welcome. Talk to us first if you're unsure.
+
+## Workloads
+
+Under `workloads/`:
+
+- **synthetic** — parameterized shape generators for controlled sweeps.
+- **mobilebert** — operator traces extracted from the real INT8
+  MobileBERT model via the canonical extraction flow.
+- **mobilenetv2** — operator traces extracted from the real INT8
+  MobileNetV2 model, same flow.
+
+These let you evaluate the model against realistic tile/site shape
+distributions rather than synthetic ones alone.
+
+## Where to look next
+
+- `PROJECT_GUIDE.md` — workflow, milestones, and rubric.
+- `PROJECT_IDEAS.md` — starter research questions.
+- `docs/01_architecture_overview.md` — the platform at a glance.
+- `docs/02_ctb_mech_and_regimes.md` — the mechanistic model and what
+  each regime means.
+- `docs/03_rtl_and_testbenches.md` — the RTL and how the testbenches
+  drive it.
+
+## License
+
+Apache-2.0 (see `LICENSE`).
