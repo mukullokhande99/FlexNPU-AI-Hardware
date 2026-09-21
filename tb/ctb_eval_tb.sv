@@ -3,21 +3,25 @@
 
 `timescale 1ns/1ps
 
-module ctb_probe_tb;
-    parameter integer DECOUPLE_MAX = 2;
-    parameter integer K_UNDER_TEST = 16;
-    parameter integer DRAIN_ISSUE_ON_RETURN = 0;
-    parameter integer ARRAY_M = 16;
-    parameter integer ARRAY_N = 16;
-    parameter integer K_TILE = 16;
-    parameter integer MAX_K = 1024;
-    parameter integer ACT_WIDTH = 8;
-    parameter integer ACC_WIDTH = 32;
-    parameter integer ACT_FIFO_DEPTH = 16;
-    parameter integer OUT_FIFO_DEPTH = 32;
-    parameter integer PIPE_LAT = 1;
-    parameter integer OUTFIFO_RD_LAT = 1;
+// Overridable knobs live in the module header so `iverilog -Pctb_probe_tb.<PARAM>=<val>`
+// works across Icarus versions (see ctb_regime_tb.sv for the underlying reason).
+module ctb_probe_tb #(
+    parameter integer DECOUPLE_MAX          = 2,
+    parameter integer K_UNDER_TEST          = 16,
+    parameter integer DRAIN_ISSUE_ON_RETURN = 0,
+    parameter integer ARRAY_M               = 16,
+    parameter integer ARRAY_N               = 16,
+    parameter integer K_TILE                = 16,
+    parameter integer MAX_K                 = 1024,
+    parameter integer ACT_WIDTH             = 8,
+    parameter integer ACC_WIDTH             = 32,
+    parameter integer ACT_FIFO_DEPTH        = 16,
+    parameter integer OUT_FIFO_DEPTH        = 32,
+    parameter integer PIPE_LAT              = 1,
+    parameter integer OUTFIFO_RD_LAT        = 1
+) ();
 
+    // Derived parameters (not user-overridable) stay in the module body.
     parameter integer IN_BUF_ADDR_WIDTH = $clog2(MAX_K);
     parameter integer ACT_BUF_DATA_WIDTH = ARRAY_M * ACT_WIDTH;
     parameter integer WGT_BUF_DATA_WIDTH = ARRAY_N * ACT_WIDTH;

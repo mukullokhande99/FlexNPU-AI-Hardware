@@ -11,23 +11,31 @@
 
 `timescale 1ns/1ps
 
-module ctb_regime_tb;
-    parameter integer DECOUPLE_MAX          = 3;
-    parameter integer K_UNDER_TEST          = 1024;
-    parameter integer DRAIN_ISSUE_ON_RETURN = 1;
-    parameter integer SWAIT_EARLY_EXIT      = 1;
-    parameter integer SWAIT_EARLY_THRESHOLD = 11;
-    parameter integer ARRAY_M               = 16;
-    parameter integer ARRAY_N               = 16;
-    parameter integer K_TILE                = 16;
-    parameter integer MAX_K                 = 4096;
-    parameter integer ACT_WIDTH             = 8;
-    parameter integer ACC_WIDTH             = 32;
-    parameter integer ACT_FIFO_DEPTH        = 16;
-    parameter integer OUT_FIFO_DEPTH        = 32;
-    parameter integer PIPE_LAT              = 1;
-    parameter integer OUTFIFO_RD_LAT        = 1;
+// Overridable knobs live in the module header so `iverilog -Pctb_regime_tb.<PARAM>=<val>`
+// works across Icarus versions. Icarus 12.0 (Ubuntu-latest GH Actions) rejects
+// -P overrides on parameters declared in the module body with:
+//   "Parameter cannot be overridden in the scope it has been declared in."
+// Icarus 11.0 (Ubuntu 22.04) accepts either form; the header form works on both.
+module ctb_regime_tb #(
+    parameter integer DECOUPLE_MAX          = 3,
+    parameter integer K_UNDER_TEST          = 1024,
+    parameter integer DRAIN_ISSUE_ON_RETURN = 1,
+    parameter integer SWAIT_EARLY_EXIT      = 1,
+    parameter integer SWAIT_EARLY_THRESHOLD = 11,
+    parameter integer ARRAY_M               = 16,
+    parameter integer ARRAY_N               = 16,
+    parameter integer K_TILE                = 16,
+    parameter integer MAX_K                 = 4096,
+    parameter integer ACT_WIDTH             = 8,
+    parameter integer ACC_WIDTH             = 32,
+    parameter integer ACT_FIFO_DEPTH        = 16,
+    parameter integer OUT_FIFO_DEPTH        = 32,
+    parameter integer PIPE_LAT              = 1,
+    parameter integer OUTFIFO_RD_LAT        = 1
+) ();
 
+    // Derived parameters — always computed from the overridable knobs above.
+    // Kept in the module body because they are not user-overridable.
     parameter integer IN_BUF_ADDR_WIDTH    = $clog2(MAX_K);
     parameter integer ACT_BUF_DATA_WIDTH   = ARRAY_M * ACT_WIDTH;
     parameter integer WGT_BUF_DATA_WIDTH   = ARRAY_N * ACT_WIDTH;
