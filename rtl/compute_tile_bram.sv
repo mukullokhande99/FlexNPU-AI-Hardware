@@ -46,7 +46,18 @@ module compute_tile_bram #(
     // output port parameters
     parameter integer OUT_BUF_ADDR_WIDTH    = $clog2(ARRAY_M),   //BRAM_ADDR_W — one entry per row
     parameter integer OUT_BUF_DATA_WIDTH    = ARRAY_N * ACC_WIDTH,//BRAM_DATA_W — one drained row (N cols)
-    parameter integer OUT_BUF_WE_WIDTH      = OUT_BUF_DATA_WIDTH/8 //BRAM_WE_W
+    parameter integer OUT_BUF_WE_WIDTH      = OUT_BUF_DATA_WIDTH/8,//BRAM_WE_W
+
+    // Decoupling / drain-issue knobs (moved into the header so `iverilog
+    // -P<top>.DUT.<PARAM>=<val>` and named-parameter binding `.<PARAM>(x)`
+    // from the shell work under Icarus 12.0's stricter parameter-scoping
+    // rules. Defaults preserve the D=3 / Y2 / SWAIT-early-exit canonical
+    // realization exactly. Full derivation comments retained below at
+    // the original declaration sites.
+    parameter integer DECOUPLE_MAX          = 3,
+    parameter integer SWAIT_EARLY_EXIT      = 1,
+    parameter integer SWAIT_EARLY_THRESHOLD = 11,
+    parameter integer DRAIN_ISSUE_ON_RETURN = 1
 )(
     input  wire                             clk,
     input  wire                             rst_n,
@@ -214,7 +225,11 @@ module compute_tile_bram #(
     // lead rather than directly mirroring FIFO capacity. D=3 is safe across the
     // validated K sweep; D=4 causes a real FIFO overflow at K=1024.
     // Drain FSM auto-restarts while outstanding work remains.
-    parameter integer DECOUPLE_MAX = 3;  // max launched-but-not-fully-drained passes; D=3 validated safe
+    // DECOUPLE_MAX is a module-header parameter (see the `#(...)` above).
+    // Kept as a header parameter — not a body parameter — so external
+    // named-binding `.DECOUPLE_MAX(x)` and iverilog `-P` overrides work
+    // under Icarus 12.0's strict scope rules. Default 3 is the D=3
+    // validated safe canonical value.
     reg [2:0] r_pending;                   // 0..7 with headroom
 
     // 2026-09-19 INTERVENTION-Y1-A: S_WAIT early exit.
@@ -232,9 +247,12 @@ module compute_tile_bram #(
     // and K_TILE which are compile-time parameters). SWAIT_EARLY_EXIT is
     // a compile-time parameter (default 1); setting it 0 recovers the
     // baseline `mm_done`-gated behavior byte-for-byte.
-    parameter integer SWAIT_EARLY_EXIT      = 1;
-    parameter integer SWAIT_EARLY_THRESHOLD = 11;
-    parameter integer DRAIN_ISSUE_ON_RETURN = 1;
+    //
+    // SWAIT_EARLY_EXIT, SWAIT_EARLY_THRESHOLD, DRAIN_ISSUE_ON_RETURN are
+    // module-header parameters (see `#(...)` above) — not body parameters —
+    // so external named-binding and iverilog `-P` overrides work under
+    // Icarus 12.0's strict scope rules. Defaults 1 / 11 / 1 preserve the
+    // Y2 + S_WAIT-early-exit canonical realization.
     reg [$clog2(SWAIT_EARLY_THRESHOLD+2)-1:0] wait_cnt;
 
     // Diagnostic per-state cycle counters (2026-09-18). Reset only on rst_n.
