@@ -4,7 +4,7 @@ This repo exposes the FlexNPU research platform so students can do
 architecture-aware research on it. The course instructors and TAs
 decide how projects are structured, delivered, and graded. What
 this document does is describe the tools and point at the research
-directions I would like student help on.
+directions where broader exploration would be especially useful. 
 
 ## Tools
 
@@ -16,8 +16,7 @@ directions I would like student help on.
 | RTL testbenches | `rtl/` + `tb/` | seconds–minutes | validation of chosen points |
 | Optional PPA sketch | `docs/04_ppa_flow.md` | minutes | relative area / cell count |
 
-The mechanistic layer and the C++ simulator are the exploration
-surface. RTL is where you confirm a chosen point.
+The C++ simulator and mechanistic model are the main exploration tools; RTL is used to validate selected design points.
 
 ## Research directions
 
