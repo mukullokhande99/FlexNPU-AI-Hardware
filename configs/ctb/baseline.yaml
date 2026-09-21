@@ -1,0 +1,34 @@
+# ============================================================
+# CTB runtime knobs — the file a student edits during a project
+# ============================================================
+#
+# These are the parameters that both the Python mechanistic model
+# (simulator/ctb_mech/) and the RTL testbenches (tb/) can be
+# reconfigured with. tools/config_bridge.py reads this file
+# together with a configs/arch/*.yaml and emits either:
+#   - iverilog -P override args (for RTL runs)
+#   - a CTBParams(...) construction (for the Python model)
+#
+# For onboarding, change decouple_max from 3 to 1 and re-run the
+# parity example to see the credit-limited regime activate.
+
+# Architectural manifest to pair with (path relative to repo root).
+arch: "configs/arch/npu_core_16x16.yaml"
+
+# Workload knob (also settable per-run via --K on the CLI).
+k_under_test: 1024
+
+# CTB dispatch / credit / drain / storage knobs.
+dispatch:
+  k_tile: 16
+  decouple_max: 3            # credit depth D
+  drain_issue_on_return: 1   # Y2 drain policy (1 = drain-on-return, 0 = classic)
+
+storage:
+  out_fifo_depth: 32         # per-row output FIFO depth CAP
+  act_fifo_depth: 16
+
+# Producer FSM shortcut (research knob; leave at the defaults unless
+# your hypothesis explicitly targets it).
+swait_early_exit: 1
+swait_early_threshold: 11

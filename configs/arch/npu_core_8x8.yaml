@@ -1,0 +1,60 @@
+# ============================================================
+# FlexNPU NPU Core Architecture — 8x8 variant (student edition)
+# ============================================================
+#
+# Second architectural manifest used by the onboarding exercise
+# and by simple geometry sweeps. Same schema as npu_core_16x16.yaml.
+schema_version: 1
+config_name: "npu_core_8x8"
+
+geometry:
+  array_m: 8
+  array_n: 8
+
+datapath:
+  act_width_bits: 8
+  acc_width_bits: 32
+
+storage:
+  act_buffer:
+    capacity_words: 1024
+    ports: 1
+    banking: 1
+  wgt_buffer:
+    capacity_words: 1024
+    ports: 1
+    banking: 1
+  out_buffer:
+    capacity_rows: 512
+    ports: 1
+    banking: 1
+
+interface:
+  derive_from_geometry: true
+  act_stream_width_bits: 64
+  wgt_stream_width_bits: 64
+  out_stream_width_bits: 64
+  ctrl_addr_width_bits: 16
+  ctrl_data_width_bits: 32
+  outstanding_max: 8
+  channels: 2
+
+dispatch:
+  mode: "op_fsm_per_op"
+  command_store_depth: 8
+  max_tiles_per_op: 65535
+
+capabilities:
+  softmax_slot: false
+  softmax_precision: "f32"
+  depthwise: false
+  rescale_fused: false
+
+provenance:
+  description: |
+    Smaller 8x8 variant of the FlexNPU compute core. Useful for
+    onboarding, quick sweeps, and rectangular-geometry comparisons
+    against the 16x16 baseline. Note that the RTL's per-pass cycle
+    behavior is empirically anchored at 16x16; students exploring
+    geometry changes must call this out and, if pursuing Lane A
+    seed question A4, may re-anchor via the RTL testbenches.

@@ -1,0 +1,87 @@
+# ============================================================
+# FlexNPU NPU Core Architecture — 16x16 baseline (student edition)
+# ============================================================
+#
+# Technology-neutral architectural description of the NPU compute core.
+# This manifest is consumed by:
+#   - the CTB mechanistic Python simulator (simulator/ctb_mech/)
+#   - the RTL testbenches (tb/) via tools/config_bridge.py, which
+#     translates the values below into iverilog -P overrides.
+#
+# Schema version 1. Break here if any semantic changes.
+schema_version: 1
+config_name: "npu_core_16x16"
+
+# ------------------------------------------------------------
+# GEOMETRY — compute-array dimensions
+# ------------------------------------------------------------
+# array_m and array_n are logically independent. For the baseline
+# they are equal (16x16); rectangular geometries are supported by
+# the RTL parameter surface and by ctb_mech.
+geometry:
+  array_m: 16          # systolic rows
+  array_n: 16          # systolic cols
+
+# ------------------------------------------------------------
+# DATAPATH — precision (currently frozen at i8xi8 -> i32)
+# ------------------------------------------------------------
+datapath:
+  act_width_bits: 8
+  acc_width_bits: 32
+
+# ------------------------------------------------------------
+# LOCAL STORAGE — capacity + logical port properties
+# ------------------------------------------------------------
+storage:
+  act_buffer:
+    capacity_words: 1024
+    ports: 1
+    banking: 1
+  wgt_buffer:
+    capacity_words: 1024
+    ports: 1
+    banking: 1
+  out_buffer:
+    capacity_rows: 512
+    ports: 1
+    banking: 1
+
+# ------------------------------------------------------------
+# INTERFACE — core-external streaming widths
+# ------------------------------------------------------------
+interface:
+  derive_from_geometry: true
+  act_stream_width_bits: 128
+  wgt_stream_width_bits: 128
+  out_stream_width_bits: 64
+  ctrl_addr_width_bits: 16
+  ctrl_data_width_bits: 32
+  outstanding_max: 8
+  channels: 2
+
+# ------------------------------------------------------------
+# DISPATCH / COMMAND STORE
+# ------------------------------------------------------------
+dispatch:
+  mode: "op_fsm_per_op"
+  command_store_depth: 8
+  max_tiles_per_op: 65535
+
+# ------------------------------------------------------------
+# CAPABILITY FLAGS
+# ------------------------------------------------------------
+capabilities:
+  softmax_slot: false
+  softmax_precision: "f32"
+  depthwise: false
+  rescale_fused: false
+
+# ------------------------------------------------------------
+# PROVENANCE
+# ------------------------------------------------------------
+provenance:
+  description: |
+    Baseline 16x16 int8 systolic NPU used as the reference
+    architecture for the AI Hardware course. The RTL under rtl/
+    and the mechanistic simulator under simulator/ctb_mech/ both
+    parameterize off this manifest via tools/config_bridge.py.

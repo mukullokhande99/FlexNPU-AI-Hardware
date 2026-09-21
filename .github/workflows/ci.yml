@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y iverilog verilator python3-pip
+          python3 -m pip install --user -r requirements.txt
+
+      - name: sanity — no forbidden paths or secrets
+        run: |
+          set -e
+          if grep -RIn --include='*.py' --include='*.md' --include='*.sv' \
+             --include='*.yaml' --include='*.yml' --include='*.cpp' \
+             --include='Makefile' \
+             -E '/home/[a-zA-Z0-9._-]+/' .; then
+            echo "ERROR: absolute /home/... path found"; exit 1
+          fi
+          if git ls-files | grep -E '(^|/)(\.claude|\.env|.*_key|.*\.pem)$'; then
+            echo "ERROR: potential secret / private file committed"; exit 1
+          fi
+
+      - name: pytest — ctb_mech regressions + smoke tests
+        run: |
+          python3 -m pytest -q simulator/ctb_mech/test_regimes.py tests/
+
+      - name: verilator — byte-exact GEMM correctness
+        run: make ctb_correctness
+
+      - name: iverilog — regime TB compile + run
+        run: make ctb_eval

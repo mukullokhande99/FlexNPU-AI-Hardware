@@ -1,0 +1,38 @@
+FlexNPU-AI-Hardware v0.1 — LICENSE (UNRESOLVED)
+
+*** DO NOT PUBLISH THIS REPO WITHOUT REPLACING THIS FILE. ***
+
+Canonical FlexNPU licensing is currently ambiguous. Evidence gathered
+during the v0.1 dry run:
+
+  * /home/yg9bq/Iree_workplace/FlexNPU has NO LICENSE, LICENSE.md, or
+    COPYING file at any depth.
+  * /home/yg9bq/Iree_workplace/FlexNPU/README.md contains exactly one
+    "## License" section whose body reads "TBD."
+  * No SPDX identifiers appear in any source file (Python, SystemVerilog,
+    C++, YAML).
+  * No copyright notices appear in file headers.
+
+Because the derived student repo copies files verbatim from canonical
+FlexNPU (see `README.md` §"What you get"), it CANNOT be published under
+a permissive open-source license until the canonical maintainer commits
+to one and applies it to the canonical repo.
+
+Recommended resolution path:
+
+  1. FlexNPU maintainer picks a permissive license (MIT, Apache-2.0,
+     or BSD-3-Clause). MIT is the smallest-footprint choice; Apache-2.0
+     is the safer choice if any patent claims are anticipated.
+  2. Maintainer commits a LICENSE file to canonical FlexNPU and adds
+     an SPDX-License-Identifier line to top-level source files (the
+     RTL, compiler seam files, ctb_mech, and testbenches this repo
+     borrows from).
+  3. Replace THIS file with a copy of the same license text.
+  4. Add an SPDX header to newly authored files in this repo:
+       // SPDX-License-Identifier: <chosen>       (for .sv / .cpp)
+       # SPDX-License-Identifier: <chosen>        (for .py / .yaml)
+  5. Update `README.md` §"License" to name the chosen license.
+
+Do NOT guess a license for the student repo. Publishing FlexNPU-derived
+code under a license the canonical author has not endorsed would create
+a licensing conflict downstream.

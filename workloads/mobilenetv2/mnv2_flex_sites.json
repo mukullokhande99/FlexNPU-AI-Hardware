@@ -1,0 +1,18 @@
+[
+  {
+    "idx": 0,
+    "name": "/classifier/classifier.1/Gemm_MatMul_quant",
+    "a_q_name": "/Flatten_output_0_quantized",
+    "s_a_name": "/Flatten_output_0_scale",
+    "z_a_name": "/Flatten_output_0_zero_point",
+    "W_q_name": "classifier.1.weight_quantized",
+    "s_w_name": "classifier.1.weight_scale",
+    "bias_name": "classifier.1.bias",
+    "y_fp_ort_name": "logits",
+    "K": 1280,
+    "N": 1000,
+    "N_padded": 1008,
+    "M": 1,
+    "count": 1
+  }
+]

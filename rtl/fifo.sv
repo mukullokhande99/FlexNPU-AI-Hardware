@@ -1,0 +1,65 @@
+module fifo #(
+    parameter WIDTH = 1,
+    parameter DEPTH = 16,
+    parameter PRECISION=4
+)(
+    input  wire clk,
+    input  wire rst,
+    input  wire wr_en,
+    input  wire rd_en,
+    // input [2:0] precision,
+    input  wire [WIDTH-1:0] din,
+    output reg  [WIDTH-1:0] dout,
+    // input [3:0] precision,
+    output wire full,
+    output wire empty
+    // output wire active
+);
+
+    reg [WIDTH-1:0] mem [0:DEPTH-1] ;
+    reg [$clog2(DEPTH)-1:0]  wr_ptr;
+    reg [$clog2(DEPTH)-1:0]  rd_ptr;
+    reg [$clog2(DEPTH):0]  count;
+    //reg [3:0] precision_count;
+
+    assign full  = (count == DEPTH);
+    assign empty = (count == 0);
+
+    integer i;
+
+    always @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            wr_ptr <= 0;
+            rd_ptr <= 0;
+            dout   <= 0;
+            for (i = 0; i < DEPTH; i = i + 1)
+                mem[i] <= 0;
+        end else begin
+            if (wr_en && !full) begin // write
+                mem[wr_ptr] <= din;
+                wr_ptr <= wr_ptr + 1;
+            end
+            if (rd_en && !empty) begin // read 
+                dout <= mem[rd_ptr];
+                rd_ptr <= rd_ptr + 1;
+            end
+        end
+    end
+
+    // count
+    always @(posedge clk or negedge rst) begin
+        if (!rst) begin
+            count  <= 0;
+        end
+        else if (wr_en && !rd_en && !full) begin
+            count  <= count + 1;
+        end
+        else if (!wr_en && rd_en && !empty) begin
+            count  <= count - 1;
+        end
+        else begin
+            count <= count;
+        end
+    end
+
+endmodule
