@@ -5,7 +5,7 @@
 FlexNPU is a full-stack accelerator research platform: real ONNX
 models go through graph and operator analysis, workload realization,
 analytical and cycle-level modeling, RTL, an FPGA implementation, and
-end-to-end execution on a physical Kria FPGA prototype under a real
+end-to-end execution on an FPGA prototype under a real
 host runtime. This repo is the **student slice** of that stack —
 enough to do real architecture- and mapping-aware research on the
 same RTL and workload shapes the platform runs.
@@ -35,7 +35,7 @@ same RTL and workload shapes the platform runs.
     FPGA implementation                                ┐
        │                                               │
        ▼                                               │  research
-    physical Kria FPGA prototype                       │  repo
+    FPGA prototype                                     │  repo
        │                                               │
        ▼                                               │
     host runtime + end-to-end workloads                │
