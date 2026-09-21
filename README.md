@@ -1,5 +1,7 @@
 # FlexNPU-AI-Hardware (v0.1)
 
+[![CI](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml)
+
 A minimal, real-hardware student platform for the "AI Hardware" course.
 Extracted from the canonical FlexNPU research repo. Runs entirely on a
 Linux host — no FPGA, no board, no vendor toolchain.
