@@ -55,17 +55,4 @@ make workload_replay    # Python: replay MobileBERT trace through ctb_mech
 - `PROJECT_GUIDE.md` — student workflow, onboarding exercise, rubric.
 - `PROJECT_IDEAS.md` — Lane A and Lane B seed questions.
 
-## What this is not
-
-- Not a canned lab. Students pick a research question inside a lane.
-- Not FPGA-dependent. No Kria, Vivado, or ORT runtime.
-- Not a general accelerator SDK. The scope is the CTB compute tile.
-- Not the canonical FlexNPU research repo. Student results feed back to
-  canonical only via TA/researcher review and independent reproduction
-  — see `PROJECT_GUIDE.md` §"Upstreaming".
-
-## License
-
-**Unresolved.** Canonical FlexNPU has no LICENSE file and its README
-says "TBD." This repo therefore cannot yet be published under any
-open-source license. See `LICENSE` for the resolution path.
+- 
