@@ -12,7 +12,7 @@ PY         ?= python3
 CONFIG     ?= configs/ctb/baseline.yaml
 K          ?= 1024
 
-.PHONY: help check onboarding ctb_correctness ctb_eval regime_walk parity workload_replay pytest clean
+.PHONY: help check onboarding ctb_correctness ctb_eval regime_walk parity workload_replay pytest sim_core sim_core_test clean
 
 help:
 	@echo "FlexNPU-AI-Hardware — student targets"
@@ -25,6 +25,8 @@ help:
 	@echo "  make regime_walk        Python: walk K to hit each regime."
 	@echo "  make parity             Python + iverilog: sim-vs-RTL side-by-side."
 	@echo "  make workload_replay    Replay a MobileBERT trace through ctb_mech."
+	@echo "  make sim_core           Build the C++ event-driven simulator."
+	@echo "  make sim_core_test      Build + ctest the C++ simulator (6 tests)."
 	@echo "  make pytest             Run smoke tests + ctb_mech regressions."
 	@echo "  make clean              Remove $(BUILD_DIR)."
 
@@ -36,11 +38,11 @@ check:
 	@$(PY) -m pytest simulator/ctb_mech/test_regimes.py -q
 	@echo "check: OK"
 
-onboarding: check ctb_correctness ctb_eval regime_walk parity
+onboarding: check ctb_correctness ctb_eval sim_core_test regime_walk parity
 	@echo ""
 	@echo "===================================================="
 	@echo "Onboarding gate: all steps completed."
-	@echo "See PROJECT_GUIDE.md for what to submit in your PR."
+	@echo "See PROJECT_GUIDE.md for the research workflow."
 	@echo "===================================================="
 
 $(BUILD_DIR):
@@ -82,5 +84,13 @@ workload_replay:
 pytest:
 	@$(PY) -m pytest -q simulator/ctb_mech/test_regimes.py tests/
 
+# --- C++ event-driven simulator (simulator/core/) ---
+sim_core:
+	@cmake -S simulator/core -B simulator/core/build -DCMAKE_BUILD_TYPE=Release >/dev/null
+	@cmake --build simulator/core/build -j4
+
+sim_core_test: sim_core
+	@cd simulator/core/build && ctest --output-on-failure
+
 clean:
-	@rm -rf $(BUILD_DIR)
+	@rm -rf $(BUILD_DIR) simulator/core/build

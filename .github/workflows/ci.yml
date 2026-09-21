@@ -40,3 +40,6 @@ jobs:
 
       - name: iverilog — regime TB compile + run
         run: make ctb_eval
+
+      - name: C++ event-driven simulator — ctest
+        run: make sim_core_test

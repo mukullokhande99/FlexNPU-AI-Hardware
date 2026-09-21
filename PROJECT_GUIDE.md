@@ -1,156 +1,105 @@
-# FlexNPU-AI-Hardware — Project Guide
+# Project Guide
 
-This document is the student handbook for the AI Hardware final project.
+This guide describes how to do a project on FlexNPU-AI-Hardware.
+It is not a syllabus. Grading, deadlines, and administrative details
+live wherever the course itself lives.
 
-## Philosophy
+## The stack
 
-**Bounded freedom.** You pick a research question inside a labeled lane
-(see `PROJECT_IDEAS.md`). We supply the tooling, the RTL, the traces,
-and the workflow. You supply the hypothesis, the experiment, and the
-causal explanation.
+FlexNPU exposes several layers of description at different fidelity /
+speed points. Choose the layer that answers your question, not the
+one that has the most detail.
 
-The workflow is:
+| Layer | Where it lives | Cost | Good for |
+|:---|:---|:---|:---|
+| Analytical / roofline | `analysis/roofline.py` | milliseconds | intuition, order-of-magnitude bounds, mapping first-pass |
+| Event-driven C++ simulator | `simulator/core/` | seconds per point, sweep-friendly | architecture / mapping DSE, dispatch scheduling, host/DMA modeling |
+| CTB mechanistic model | `simulator/ctb_mech/` | ms per point | producer / drain / credit / per-row FIFO service questions |
+| RTL testbench | `rtl/` + `tb/` under iverilog / Verilator | seconds–minutes | validation of a selected point |
+| Optional PPA sketch | `docs/04_ppa_flow.md` | minutes | rough area / cell-count comparison across configs |
 
-```
-question -> hypothesis -> prediction ->
-simulator exploration -> <=5 RTL validation points ->
-real-workload replay -> causal explanation -> PR
-```
+The examples under `examples/` show how these compose end-to-end.
 
-Sweeps without a preceding prediction are penalized in review. Causal
-explanation is weighted more than raw numbers. Real workload relevance
-is required unless you justify otherwise.
+## Two lanes
 
-## Onboarding exercise
+Most projects fall into one of two lanes. `PROJECT_IDEAS.md` expands
+each of them with concrete starter questions.
 
-Everyone completes this in the first week. It is one PR containing your
-`projects/<gh-handle>/lab1.md` file and the four artifacts below.
+- **Lane A — NPU realization and resource co-design.** How should the
+  accelerator itself be provisioned and organized? What is dormant,
+  what is limiting, what is unsafe?
+- **Lane B — performance modeling, mapping, and dataflow.** For a
+  fixed accelerator, why does a workload run the way it does, and
+  which mapping choice actually changes behavior?
 
-**Time budget:** ~60-90 minutes.
+Cross-lane work is welcome as long as the question is well-defined.
 
-Steps:
+## The research process we expect
 
-1. **Environment check.** Run `make check`. All targets return exit 0.
-   Paste the output.
-2. **Byte-exact RTL correctness.** Run `make ctb_correctness`. Confirm
-   `ALL CASES PASS`. Paste the tail of the log.
-3. **Regime walk.** Run `make regime_walk`. In one sentence per row,
-   annotate *which* CTB regime dominates each K and *why*.
-4. **Change one YAML parameter, predict, verify.**
-   - Edit `configs/ctb/baseline.yaml`: change `decouple_max: 3` to
-     `decouple_max: 1`.
-   - **Before running anything**, write in your `lab1.md` what you
-     predict will happen to `credit_stall_cyc` at K=1024 relative to
-     the baseline value.
-   - Run `make parity K=1024`. Paste the parity table. State whether
-     the prediction held.
-5. **Restore** `decouple_max: 3` and confirm the parity table returns
-   to the baseline numbers.
+Not a checklist. This is roughly the shape of a project that produces
+a useful answer.
 
-Pass criteria (auto-checked where possible):
-- `make onboarding` returns exit 0.
-- The `lab1.md` file contains the four artifacts above and the
-  annotations in your own words.
+1. **Pick a question** — from `PROJECT_IDEAS.md` or an adjacent
+   variant. Prefer a question with a *falsifiable* prediction over
+   an open-ended sweep.
+2. **State a hypothesis / prediction** — write it down before you
+   modify anything. A quantitative claim is stronger than a
+   directional one.
+3. **Explore with the appropriate FlexNPU tool** — usually one of
+   the top three layers above. Sweep broadly; there is no cost to
+   the mechanistic model.
+4. **Validate the important claims** — a handful of RTL runs at
+   carefully chosen points is worth more than dozens of casual ones.
+5. **Evaluate on real workloads where relevant** — the
+   `workloads/mobilebert/` and `workloads/mobilenetv2/` traces let
+   you check whether the effect you found matters for a real
+   operator distribution.
+6. **Explain the mechanism** — which model layer moves? Which
+   regime? What surprised you? A causal explanation is worth
+   more than a table of numbers.
+7. **Submit through the fork / PR workflow** — fork this repo,
+   work in the fork, open a PR back to the course repo with your
+   writeup and code.
 
-## Project workflow
+If your project falsifies one of our assumptions, that is a
+positive outcome, not a failure. Write it up.
 
-After onboarding is merged:
+## Simulator-vs-RTL parity
 
-1. **Choose a lane and question** from `PROJECT_IDEAS.md`. Open a
-   GitHub issue titled `research_question: <lane> <slug>` with the
-   fields below. Approved variants are allowed.
+Predictions matter more than model-vs-RTL cycle-count agreement.
+The mechanistic model is not cycle-exact; agreement to within a few
+percent on relevant observables (service, stall, peak FIFO,
+overflow) is normal and sufficient for most projects.
 
-   ```
-   Lane: A | B
-   Seed question: A1 | A2 | ... | B6 (or "variant of Ax/Bx")
-   Question (1 short paragraph):
-   Why it matters (1-2 sentences):
-   Expected effort: low | medium | high
-   ```
+When it *disagrees* by more than that on an observable central to
+your claim, treat the disagreement itself as the finding. Diagnose
+it. Ask what state / event the model is missing.
 
-   TA approves within 48h.
+## Cross-cutting: PPA
 
-2. **Create your project directory:** `projects/<gh-handle>/`. This is
-   yours; all your artifacts live here.
+Hardware cost is a legitimate dimension of any Lane A comparison and
+sometimes shows up in Lane B mapping choices. FlexNPU-AI-Hardware
+ships a lightweight open-flow PPA sketch (see `docs/04_ppa_flow.md`).
+Report relative area / cell count / register count for the
+configurations you compare, and be honest about what those numbers
+do and do not tell you. This is not ASIC signoff; interesting
+designs can be evaluated with the full ASIC flow separately.
 
-3. **Baseline commit:** run the untouched simulator + a chosen RTL
-   configuration on your workload of interest. Commit
-   `projects/<gh-handle>/baseline.md` + raw CSVs. Baseline lands
-   *before* any code modification.
+## Writeup
 
-4. **Hypothesis + prediction commit:** write
-   `projects/<gh-handle>/hypothesis.md` with a **quantitative**
-   prediction. Commit *before* editing `rtl/`, `simulator/`,
-   `analysis/`, or `workloads/`.
+A short writeup that clearly states the question, the prediction,
+what you found, and *why* is the right output. There is no fixed
+template. Diagrams help. Raw sweep CSVs and plots can live alongside
+your code in the PR.
 
-5. **Simulator exploration.** Use `simulator/ctb_mech/` + roofline.
-   Sweep only what the prediction requires.
+## Where to look
 
-6. **RTL validation:** rebuild RTL via `make ctb_eval CONFIG=...`
-   (or the correctness gate for numerical-correctness changes) at
-   at most 5 chosen (K, D, CAP, ...) cells. Log the parity table.
-
-7. **Real workload replay:** replay a `workloads/mobilebert/` or
-   `workloads/mobilenetv2/` trace through the modified simulator.
-
-8. **Causal explanation:** `projects/<gh-handle>/explanation.md`,
-   <= 600 words. Which of the six CTB mechanism layers moved? Which
-   regime changed? What surprised you?
-
-9. **Open PR** using `.github/pull_request_template.md`. Fill out
-   every section. Attach graphs. Link the hypothesis commit.
-
-10. **Review:** one TA + one peer student. Merge on green CI +
-    two thumbs-up.
-
-## Grading rubric
-
-Five axes, each scored 0-4.
-
-| Axis | Weight |
-|---|---|
-| Question quality — falsifiable, scoped, engages a real FlexNPU concept | 15% |
-| Prediction discipline — hypothesis commit predates the modification; prediction is quantitative | 20% |
-| Simulator/RTL parity rigor — meaningful validation points; parity analyzed | 25% |
-| Causal explanation — mechanism / regime attribution, not a plot dump | 25% |
-| Real-workload relevance — transfer to at least one provided trace | 15% |
-
-Bonus (up to +10%):
-- Discovering a framework bug with a fix PR.
-- Contributing a reusable tool or trace.
-- Independently reproducing another student's finding.
-
-Deductions:
-- Sweeps without a preceding prediction: -5% each.
-- Modifying `rtl/`, `simulator/ctb_mech/ctb_mech.py`, or
-  `tools/config_bridge.py` without TA approval: PR bounced.
-
-## Upstreaming to canonical FlexNPU
-
-Student PRs never auto-flow to canonical.
-
-- Merged student PRs live in this repo only.
-- Once per term, TAs nominate a subset. Instructor + canonical
-  maintainer independently reproduce the finding in a canonical
-  checkout, without copying student code.
-- If reproducible, canonical implements the change; student is credited
-  in the canonical release notes.
-
-## Guardrails (v0.1)
-
-- No absolute paths (`/home/...`) in student files. CI grep checks.
-- No secrets (`.env`, `*_key`, `*.pem`, `.claude*`). CI grep checks.
-- No `rtl/`, `simulator/ctb_mech/ctb_mech.py`, `tools/config_bridge.py`
-  edits without TA approval. Convention-locked in v0.1 (CODEOWNERS is
-  a v0.2 concern).
-- Sweep gate: >500 config runs prints a warning; keep runs small.
-
-## Known scope of v0.1
-
-- No compiler / ONNX / IREE integration. Traces ship pre-generated.
-- No FPGA / Kria / Vivado / ORT runtime.
-- No physical hardware perf counters — students see simulator counters.
-- No C++ event-driven simulator — the mechanistic Python model plus
-  RTL testbenches cover both lanes.
-- MobileBERT and MobileNetV2 traces are illustrative subsets in v0.1;
-  full regeneration from public HF checkpoints is a v0.2 deliverable.
+- `README.md` — quick start and orientation.
+- `PROJECT_IDEAS.md` — starter questions per lane.
+- `docs/01_architecture_overview.md` — the platform at a glance.
+- `docs/02_ctb_mech_and_regimes.md` — the mechanistic model.
+- `docs/03_rtl_and_testbenches.md` — the RTL and how the TBs
+  drive it.
+- `docs/04_ppa_flow.md` — optional open-flow synthesis sketch.
+- `simulator/core/SIMULATOR.md` — the event-driven C++ simulator.
+- `simulator/core/DESIGN_MEMO.md` — the timing contracts it models.
