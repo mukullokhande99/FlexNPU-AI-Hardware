@@ -1,16 +1,29 @@
 // FlexNPU cycle-accurate simulator — CLI entry point.
-// Usage: flexnpu_sim <realization> [--trace file] [--json]
+// Usage: flexnpu_sim <realization> [flags]
 //
 // Realizations available:
-//   stage_b_chain          16x16 K=2048 2-chunk (STAGE B microbenchmark, host-free)
-//   gpt2_ffn               A[512x3072]xB[3072x768] K=3072 (physical anchor)
-//   mb_style               MB-style single-dispatch persist=1 hit path
+//   stage_b_chain              16x16 K=2048 2-chunk (host-free microbenchmark)
+//   gpt2_ffn                   A[512x3072]xB[3072x768] K=3072 (physical anchor)
+//   mb_style                   MB-style single-dispatch persist=1 hit path
+//   trace   --from-shapes <p>  concatenate build_chain_realization(M,N,K)
+//                              for every row (M K N [count]) in a TSV file
+//
+// Mapping / realization overrides (apply where meaningful):
+//   --loop-order <mnc|ncm|mcn|cnm|nmc|cmn>   outer-loop order (per-workload
+//                                            for gpt2_ffn / matmul / per-site
+//                                            inside `trace`)
+//   --persist <off|hit|miss>                 override PersistPolicy on every
+//                                            constructed dispatch
+//   --json                                   emit stats JSON on stdout
+//   --trace <path>                           write event trace to path
+//                                            (output, unrelated to --from-shapes)
 
 #include "flexnpu_sim.h"
 #include <chrono>
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 using namespace flexnpu_sim;
@@ -49,17 +62,36 @@ static void dump_trace(const Simulator& sim, std::ostream& out) {
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::fprintf(stderr,
-                     "usage: %s <realization> [--trace <path>] [--json] [--summary]\n"
-                     "  realizations: stage_b_chain | gpt2_ffn | mb_style\n", argv[0]);
+                     "usage: %s <realization> [flags]\n"
+                     "  realizations:\n"
+                     "    stage_b_chain\n"
+                     "    gpt2_ffn\n"
+                     "    mb_style\n"
+                     "    trace  --from-shapes <path>\n"
+                     "  flags:\n"
+                     "    --trace <path>                 write event trace to file\n"
+                     "    --from-shapes <path>           TSV: 'M K N [count]' per row\n"
+                     "    --loop-order <mnc|ncm|mcn|cnm|nmc|cmn>\n"
+                     "    --persist <off|hit|miss>\n"
+                     "    --json | --no-summary\n", argv[0]);
         return 1;
     }
     std::string realiz = argv[1];
     std::string trace_path;
+    std::string shapes_path;
+    std::string order_str;
+    std::string persist_str;
     bool json = false;
     bool summary = true;
     for (int i = 2; i < argc; ++i) {
         if (std::strcmp(argv[i], "--trace") == 0 && i + 1 < argc) {
             trace_path = argv[++i];
+        } else if (std::strcmp(argv[i], "--from-shapes") == 0 && i + 1 < argc) {
+            shapes_path = argv[++i];
+        } else if (std::strcmp(argv[i], "--loop-order") == 0 && i + 1 < argc) {
+            order_str = argv[++i];
+        } else if (std::strcmp(argv[i], "--persist") == 0 && i + 1 < argc) {
+            persist_str = argv[++i];
         } else if (std::strcmp(argv[i], "--json") == 0) {
             json = true;
         } else if (std::strcmp(argv[i], "--summary") == 0) {
@@ -89,9 +121,81 @@ int main(int argc, char** argv) {
         host.pack_us_per_dispatch = 8.7;   // MB per-dispatch host pack (from mb_full_reference.log)
         host.mmio_overhead_us_per_dispatch = 100.0; // includes usleep(76us) per dispatch
         dispatches = build_mb_style(1000, 384, 0.7);
+    } else if (realiz == "trace") {
+        // Trace-driven realization: read a TSV of `M K N [count]` rows and
+        // build a chain per row. This is the minimum general-purpose adapter
+        // needed to feed a real workload trace through the event-driven
+        // simulator. Loop order applies per-site if --loop-order is given.
+        if (shapes_path.empty()) {
+            std::fprintf(stderr, "trace: --from-shapes <path> required\n");
+            return 3;
+        }
+        std::ifstream in(shapes_path);
+        if (!in) {
+            std::fprintf(stderr, "trace: cannot open shapes file %s\n",
+                         shapes_path.c_str());
+            return 3;
+        }
+        arch = Arch{};
+        // Host defaults matched to MB-style single-dispatch behavior; a
+        // student can override via a different arch YAML if they want a
+        // GPT-2-style host profile.
+        host.pack_us_per_dispatch = 8.7;
+        host.mmio_overhead_us_per_dispatch = 100.0;
+        LoopOrder order = order_str.empty() ? LoopOrder::MNC
+                                            : parse_order(order_str.c_str());
+        std::string line;
+        int line_no = 0;
+        int rows = 0;
+        int global_id = 0;
+        while (std::getline(in, line)) {
+            ++line_no;
+            // strip trailing CR (Windows line endings) and comments
+            if (!line.empty() && line.back() == '\r') line.pop_back();
+            auto hash = line.find('#');
+            if (hash != std::string::npos) line.erase(hash);
+            std::istringstream ls(line);
+            int M = 0, N = 0, K = 0, count = 1;
+            if (!(ls >> M >> K >> N)) continue; // blank / comment
+            ls >> count; // optional
+            if (M <= 0 || N <= 0 || K <= 0) {
+                std::fprintf(stderr,
+                             "trace: skipping %s:%d (non-positive M/K/N)\n",
+                             shapes_path.c_str(), line_no);
+                continue;
+            }
+            for (int r = 0; r < std::max(1, count); ++r) {
+                auto site = order_str.empty()
+                    ? build_chain_realization(M, N, K, arch)
+                    : build_chain_realization_ordered(M, N, K, arch, order);
+                for (auto& d : site) { d.id = global_id++; dispatches.push_back(d); }
+            }
+            ++rows;
+        }
+        std::fprintf(stderr, "trace: %d shape rows -> %zu dispatches (loop_order=%s)\n",
+                     rows, dispatches.size(),
+                     order_str.empty() ? "mnc" : order_str.c_str());
+        if (dispatches.empty()) {
+            std::fprintf(stderr, "trace: no dispatches (empty shapes file?)\n");
+            return 3;
+        }
     } else {
         std::fprintf(stderr, "unknown realization: %s\n", realiz.c_str());
         return 2;
+    }
+
+    // Post-build mapping overrides (persist policy). Apply uniformly.
+    if (!persist_str.empty()) {
+        PersistPolicy p = PersistPolicy::OFF;
+        if      (persist_str == "off")  p = PersistPolicy::OFF;
+        else if (persist_str == "hit")  p = PersistPolicy::FIX_B_HIT;
+        else if (persist_str == "miss") p = PersistPolicy::FIX_B_MISS_FILL;
+        else {
+            std::fprintf(stderr, "unknown --persist value: %s\n",
+                         persist_str.c_str());
+            return 4;
+        }
+        for (auto& d : dispatches) d.persist = p;
     }
 
     bool enable_trace = !trace_path.empty();

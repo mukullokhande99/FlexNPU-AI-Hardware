@@ -85,19 +85,26 @@ simulator-vs-RTL parity point.
 
 ## Examples
 
-`examples/` contains four short scripts that wire the pieces together:
+`examples/` contains six short scripts that wire the pieces together
+into a progression from local mechanism to real-workload mapping
+research:
 
-- `01_hello_ctb.py` — run the mechanistic CTB model at one `(K, D, CAP)`
-  point and print the regime, service cycles, and FIFO peak.
+- `01_hello_ctb.py` — mechanistic CTB model at one `(K, D, CAP)`
+  point; prints regime, service cycles, FIFO peak.
 - `02_regime_walk.py` — sweep K and watch the model move through
-  the four service regimes.
-- `03_rtl_vs_model_parity.py` — the mechanistic model and iverilog
-  RTL side by side at a chosen point.
-- `04_workload_replay.py` — replay the MobileBERT trace (361
-  operator sites) through the mechanistic model.
+  the service regimes.
+- `03_rtl_vs_model_parity.py` — mechanistic model and iverilog RTL
+  side by side at a chosen point.
+- `04_workload_replay.py` — replay the MobileBERT trace through
+  the mechanistic model.
+- `05_workload_analytical_vs_sim.py` — the same trace through the
+  analytical roofline and the C++ event-driven simulator; prints
+  the gap and its decomposition.
+- `06_mapping_compare.py` — the same trace under two mapping /
+  dataflow realizations (persist off vs hit); shows which
+  realized quantities move.
 
-`analysis/roofline.py` prints a per-site roofline table for either
-of the shipped traces:
+`analysis/roofline.py` also runs as a standalone script:
 
 ```
 python3 analysis/roofline.py \
