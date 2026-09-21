@@ -2,36 +2,60 @@
 
 [![CI](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/YiminGao0113/FlexNPU-AI-Hardware/actions/workflows/ci.yml)
 
-Student release of the FlexNPU research platform, used for the AI Hardware
-course. Runs entirely on a Linux host — no FPGA, no board, no vendor
-toolchain — and pairs a mechanistic Python simulator with the actual
-SystemVerilog RTL under automated regression.
+This repo is a **student slice of an ongoing FlexNPU research
+project**, packaged for the AI Hardware course. It exposes the parts
+of the platform students can use for architecture-aware research on
+a Linux host — the mechanistic simulator, the C++ event-driven
+simulator, the RTL, real workload traces, and a lightweight roofline
+model. Everything runs without an FPGA, a board, or a vendor toolchain.
 
-The platform is set up for open-ended work on accelerator architecture,
-resource provisioning, performance modeling, mapping, and dataflow. You
-get real cycle-accurate RTL, a fast mechanistic model that can be swept
-over thousands of design points in seconds, and operator traces
-extracted from real MobileBERT and MobileNetV2 models.
+## The larger platform and where you plug in
 
-## What you'll do
+The full FlexNPU pipeline goes from an ONNX model through a compiler
+and runtime and executes on a physical Kria FPGA prototype. The
+compiler, the runtime, and the physical deployment path stay in the
+research repo. This student release ships everything else — the RTL,
+the mechanistic and C++ simulators, the roofline model, and the
+operator traces — so you can answer real questions using the same RTL
+and the same workload shapes that end up on the physical prototype.
 
-You'll be assigned to a project group. Each group:
+Students plug into the pipeline by forking this repo, working in
+their fork, and opening a PR back:
 
-1. Forks this repo and works in the fork.
-2. Picks a research question from `PROJECT_IDEAS.md` (or proposes an
-   adjacent one).
-3. Writes down a concrete hypothesis or prediction before touching code.
-4. Explores broadly in the mechanistic simulator — dozens or hundreds
-   of points is normal.
-5. Validates a small, well-chosen subset in RTL and against the provided
-   workload traces.
-6. Writes up *why* the observed behavior happens — the story matters
-   more than the number.
-7. Opens a pull request from the fork back to this course repo for
-   the final submission.
+```
+FlexNPU research pipeline (owned by the research repo)
+──────────────────────────────────────────────────────
 
-`PROJECT_GUIDE.md` walks through how the tools compose and how to
-run this kind of project end to end.
+    ONNX model
+       │  operator extraction / site metadata
+       ▼
+    trace files ─────────────────────────────┐
+       │                                     │
+       ▼                                     │
+    mechanistic sim + C++ sim + roofline     │
+       │                                     │
+       ▼                                     │      What students do
+    RTL ─────────────────────────────────────┤      ────────────────
+       │                                     │      1. fork this repo
+       │  bitstream + runtime                │      2. work in your fork
+       ▼                                     │      3. open a PR back
+    physical Kria FPGA prototype ────────────┘      4. results we can
+                                                       reproduce may
+                                                       flow into the
+                                                       research repo
+```
+
+The middle band — traces + simulators + RTL — is what you see and
+work with in this repo. The compiler and runtime on either side are
+what turn your work into (and out of) something running on the
+physical prototype.
+
+## Two research directions
+
+Details in `PROJECT_IDEAS.md`.
+
+- **Lane A** — NPU realization and resource co-design.
+- **Lane B** — mapping and dataflow realization.
 
 ## Quick start
 
@@ -40,58 +64,51 @@ pip install -r requirements.txt
 make onboarding
 ```
 
-`make onboarding` runs:
+`make onboarding` runs the mechanistic-simulator regressions, the
+Verilator byte-exact GEMM correctness check, the Icarus CTB regime
+testbench, the C++ event-driven simulator's ctest suite, and a
+simulator-vs-RTL parity point.
 
-- the mechanistic simulator's regression tests (`simulator/ctb_mech/`);
-- byte-exact Verilator GEMM correctness for `rtl/compute_tile_bram.sv`;
-- an Icarus Verilog run of the CTB regime testbench;
-- the C++ event-driven simulator's `ctest` suite (`simulator/core/`);
-- simulator-vs-RTL parity for a canonical `(K, D)` point.
+## Examples
 
-If all five are green you're ready to work.
+`examples/` contains four short scripts that wire the pieces together:
 
-## Project directions
+- `01_hello_ctb.py` — run the mechanistic CTB model at one `(K, D, CAP)`
+  point and print the regime, service cycles, and FIFO peak.
+- `02_regime_walk.py` — sweep K and watch the model move through
+  the four service regimes.
+- `03_rtl_vs_model_parity.py` — the mechanistic model and iverilog
+  RTL side by side at a chosen point.
+- `04_workload_replay.py` — replay the MobileBERT trace (361
+  operator sites) through the mechanistic model.
 
-Two broad lanes; concrete starter questions live in `PROJECT_IDEAS.md`.
+`analysis/roofline.py` prints a per-site roofline table for either
+of the shipped traces:
 
-- **NPU realization and resource co-design** — decoupling depth, FIFO
-  capacity, drain policy, array shape, and the interactions between
-  them. Predict from the mechanistic model, then falsify in RTL.
-- **Performance modeling, mapping, and dataflow** — turn a workload's
-  operator/tile trace into an execution schedule, model the resulting
-  service and stall structure, and evaluate on real MobileBERT /
-  MobileNetV2 shape distributions.
+```
+python3 analysis/roofline.py \
+    --arch configs/arch/npu_core_16x16.yaml \
+    --trace workloads/mobilebert/mb_flex_sites.json
+```
 
-You are not restricted to these; adjacent questions grounded in the
-same platform are welcome. Talk to us first if you're unsure.
+## Layout
 
-## Workloads
+- `simulator/ctb_mech/` — Python mechanistic CTB model.
+- `simulator/core/` — C++ event-driven simulator.
+- `analysis/roofline.py` — analytical baseline.
+- `rtl/`, `tb/` — RTL and testbenches.
+- `tools/config_bridge.py` — one YAML → both simulators + iverilog.
+- `workloads/` — synthetic shape generator, MobileBERT trace,
+  MobileNetV2 trace.
+- `examples/`, `docs/`.
 
-Under `workloads/`:
+## Docs
 
-- **synthetic** — parameterized shape generators for controlled sweeps.
-- **mobilebert** — operator traces extracted from the real INT8
-  MobileBERT model via the canonical extraction flow.
-- **mobilenetv2** — operator traces extracted from the real INT8
-  MobileNetV2 model, same flow.
-
-These let you evaluate the model against realistic tile/site shape
-distributions rather than synthetic ones alone.
-
-## Where to look next
-
-- `PROJECT_GUIDE.md` — research workflow and how the tools compose.
-- `PROJECT_IDEAS.md` — Lane A / Lane B expanded, with starter
-  questions and weak-vs-strong examples.
-- `docs/01_architecture_overview.md` — the platform at a glance.
-- `docs/02_ctb_mech_and_regimes.md` — the mechanistic model and what
-  each regime means.
-- `docs/03_rtl_and_testbenches.md` — the RTL and how the testbenches
-  drive it.
-- `docs/04_ppa_flow.md` — optional Yosys + open-cell-library flow
-  for reporting relative hardware cost.
-- `simulator/core/SIMULATOR.md` — the C++ event-driven simulator.
+- PROJECT_GUIDE.md, PROJECT_IDEAS.md
+- docs/01_architecture_overview.md, docs/02_ctb_mech_and_regimes.md,
+  docs/03_rtl_and_testbenches.md, docs/04_ppa_flow.md
+- simulator/core/SIMULATOR.md
 
 ## License
 
-Apache-2.0 (see `LICENSE`).
+Apache-2.0 (see LICENSE).
