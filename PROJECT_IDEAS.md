@@ -1,109 +1,73 @@
 # Project Ideas
 
-FlexNPU currently has two main areas where broader exploration would
-be especially valuable. Adjacent questions grounded in the same
-platform are welcome. The existing D=3 / CAP=24 style results in the
-research repo are best treated as methodology anchors — they show
-what a good prediction-then-validation loop looks like. What we
-actually need is coverage of the parts of the design space they did
-not touch.
+FlexNPU exposes a fairly broad accelerator design space across both **hardware realization** and **mapping/dataflow choices**. The directions below are intended as possible research areas, not fixed assignments. Students can choose one question, combine several related ideas, or propose an adjacent direction using the same framework.
+
+The goal is to use the analytical models, simulators, RTL, and real workload traces to understand how a design or mapping choice changes the realized execution behavior — not just to sweep parameters and report the fastest point.
 
 ## Lane A — NPU realization and resource co-design
 
-I want to understand how a given realization of the accelerator (array
-geometry, tile granularity, FIFO / SRAM capacity, credit depth, drain
-policy, flow control) interacts with a workload to determine which
-constraint binds — and how much of the provisioning is actually
-active vs dormant.
+This direction explores how hardware design choices interact with workload structure.
 
-Interesting axes:
+Possible design axes include:
 
-- array geometry (16×16, 16×32, 32×16, 8×32, …);
-- `K_TILE` and other execution-granularity knobs;
-- FIFO / SRAM capacity;
-- outstanding-work credit depth;
-- drain / service organization and flow control;
-- producer vs consumer service-rate balance;
-- performance vs implementation cost (relative area / cell count).
+- array geometry;
+- `K_TILE` and execution granularity;
+- FIFO depth;
+- SRAM / local-buffer size and partitioning;
+- outstanding-work / credit depth;
+- drain and service organization;
+- flow-control policy;
+- producer vs consumer service balance;
+- implementation cost such as area, registers, memory resources, and timing.
 
-Starter questions:
+Possible directions include:
 
-- **A1** Which realization axes actually move the active constraint
-  on the MobileBERT / MobileNetV2 shape distributions?
-- **A2** Does array geometry change *which* constraint binds, or
-  only how tightly?
-- **A3** How does `K_TILE` in {8, 16, 32} change producer vs drain
-  service balance? Re-anchor the per-pass cycle constant from RTL
-  and update the mechanistic model.
-- **A4** Co-design `OUT_FIFO_DEPTH` and `DECOUPLE_MAX` for one real
-  workload: smallest safe combination, at what hardware cost.
-- **A5** Track how the active constraint moves as array geometry
-  and `K_TILE` change. Does a provisioning rule (e.g. a credit /
-  storage relation) derived under one realization transfer to
-  another? Where does it break, and why?
-- **A6** Build a performance–cost frontier across a small but
-  meaningful design space — for example `{array geometry, K_TILE,
-  D, CAP}`. Identify strictly dominated designs, behaviorally
-  equivalent designs, and points where the active bottleneck
-  changes.
-- **A7** Turn any of the above into a PPA comparison via the
-  optional flow in `docs/04_ppa_flow.md`.
-
-Tools: `simulator/ctb_mech/` for fast sweeps; `simulator/core/` when
-the change should propagate beyond the CTB; RTL for validation;
-PPA sketch for hardware-cost comparisons under identical open-flow
-synthesis assumptions.
+- how array shape changes the active bottleneck;
+- how execution granularity changes producer/drain balance;
+- how much FIFO, SRAM, or credit capacity is actually useful;
+- when additional provisioning becomes dormant;
+- when reducing a resource becomes unsafe;
+- whether resource-sizing rules transfer across workloads or architectures;
+- performance–cost frontiers across architecture choices;
+- hardware-cost evaluation of new architectural mechanisms.
 
 ## Lane B — Mapping and dataflow realization
 
-I want to understand how mapping decisions (loop order, tiling,
-split-K, persistence / reuse, dispatch order) become realized
-execution — and where the analytical bound diverges from measured
-behavior.
+This direction explores how mapping choices become actual execution behavior on the accelerator.
 
-Interesting axes:
+Possible design axes include:
 
 - tiling and tile order;
 - loop order;
-- split-K;
-- persistence / reuse and materialization behavior;
-- mapping-dependent buffering and traffic;
-- bottleneck migration under mapping change;
-- behavioral equivalence between nominally different mappings;
-- roofline prediction vs realized cycle counts.
+- split-K / K-chunking;
+- persistence and reuse;
+- materialization;
+- dispatch order and grouping;
+- mapping-dependent buffering;
+- local-storage pressure;
+- traffic and data movement.
 
-Starter questions:
+Possible directions include:
 
-- **B1** For each real workload, where does the roofline bound
-  fail, and which realized service or resource effect explains the
-  gap? The explanation is not required to be a CTB-regime label —
-  it can be an outer-pipeline effect, a mapping effect, a
-  buffering / materialization effect, a CTB service effect, a
-  dispatch / service-organization effect, or another measured
-  mechanism. Pick the level of the stack that actually explains
-  the gap.
-- **B2** Find a pair of mappings that are nominally different but
-  behaviorally identical in the C++ simulator; give a mechanism
-  for the equivalence.
-- **B3** Sweep `K_chunk` on a large-K matmul; predict the sweet
-  spot from producer / drain amortization first, then measure.
-- **B4** Which workload features (K/N ratio, N_padded slack, site
-  count, count-per-shape distribution) predict mapping
-  sensitivity? Rank MobileBERT and MobileNetV2 sites, then measure.
-- **B5** On the repeated projection shapes in MobileBERT, which
-  mapping / reuse choices materially change realized service,
-  traffic, or buffering — and why? A good answer names the
-  mechanism, not just the winner.
-- **B6** Show a workload where a different dispatch-order decision
-  materially changes realized service.
-- **B7** Decompose realized service on a real workload into an
-  analytical compute bound, a mapping / outer-pipeline overhead,
-  and a CTB service component. Determine which of those three
-  abstractions is actually needed to explain each portion of the
-  gap.
+- where analytical or roofline predictions diverge from realized execution;
+- when two different mappings produce similar realized behavior;
+- when two mappings have the same latency but very different traffic or buffering behavior;
+- how persistence or reuse changes data movement and service;
+- when K-chunking changes the active bottleneck;
+- which workload characteristics make mapping choices important;
+- when dispatch order changes execution behavior;
+- how mapping interacts with architecture choices such as array shape or SRAM capacity.
 
-Tools: `analysis/roofline.py` for the analytical baseline;
-`simulator/core/` as the workhorse for mapping / dispatch modeling;
-`simulator/ctb_mech/` for CTB-service detail when the outer layer
-is too coarse; RTL for chosen validation points; real traces under
-`workloads/mobilebert/` and `workloads/mobilenetv2/` for evaluation.
+A good project does not need to cover the whole space. A narrow question is useful if it can establish:
+
+```text
+design or mapping choice
+        ↓
+predicted mechanism
+        ↓
+measured realized behavior
+        ↓
+explanation
+```
+
+The important result is usually not just which configuration is faster, but **why the behavior changes and whether that explanation generalizes**.
