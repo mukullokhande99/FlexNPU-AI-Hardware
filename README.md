@@ -99,10 +99,11 @@ research:
   the mechanistic model.
 - `05_workload_analytical_vs_sim.py` — the same trace through the
   analytical roofline and the C++ event-driven simulator; prints
-  the gap and its decomposition.
+  the gap and attributes it to the simulator's directly counted
+  buckets plus an accounting residual.
 - `06_mapping_compare.py` — the same trace under two mapping /
-  dataflow realizations (persist off vs hit); shows which
-  realized quantities move.
+  dataflow realizations (persist off vs hit); prints which
+  realized quantities move and which stay fixed.
 
 `analysis/roofline.py` also runs as a standalone script:
 

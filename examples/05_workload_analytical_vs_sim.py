@@ -6,9 +6,16 @@ Reads a shipped workload trace (MobileBERT by default), computes the
 analytical compute-bound cycle count from `2 · M · K · N / (array_M
 · array_N)` per site, then runs the C++ event-driven simulator on
 the same set of shapes via the trace-driven CLI. Prints the gap
-between the analytical expectation and realized simulator behavior,
-and decomposes the realized wall cycles into the components the
-simulator exposes (host pack, host MMIO, DMA bank fill).
+between the analytical expectation and the realized simulator, and
+attributes the realized wall to the components the simulator
+directly counts (host pack, host MMIO, DMA bank fill) plus an
+accounting residual for cycles the simulator does not separately
+attribute to those buckets.
+
+These numbers are the result of this particular C++ event-driven
+simulator realization and its host / MMIO configuration; they are
+not a measured physical FlexNPU decomposition and should not be
+read as one.
 
 Lane B onboarding: the question this example poses is what
 additional service / architecture effects account for the gap
@@ -117,31 +124,43 @@ def main() -> int:
     bound = ana["total_bound_cycles"]
 
     gap = wall - bound
-    residual = wall - bank_fill - host_pack - host_mmio  # ≈ compute + drain
+    # Accounting residual: whatever the simulator does not separately
+    # attribute to the three counted buckets. It includes compute,
+    # drain, and any per-dispatch serialization the simulator does not
+    # break out — it is not a directly measured decomposition.
+    residual = wall - bank_fill - host_pack - host_mmio
 
     print()
-    print(f"{'quantity':<40} {'cycles':>14}")
-    print("-" * 56)
-    print(f"{'analytical compute bound (Σ macs / peak)':<40} {bound:>14,}")
-    print(f"{'realized wall (event-driven sim)':<40} {wall:>14,}")
-    print(f"{'gap (wall − bound)':<40} {gap:>+14,}")
+    print(f"{'quantity':<52} {'cycles':>14}")
+    print("-" * 68)
+    print(f"{'analytical compute bound (Σ macs / peak)':<52} {bound:>14,}")
+    print(f"{'realized wall (event-driven sim)':<52} {wall:>14,}")
+    print(f"{'gap (wall − bound)':<52} {gap:>+14,}")
     print()
-    print(f"{'realized decomposition':<40} {'cycles':>14} {'share':>8}")
-    print("-" * 65)
+    print(f"{'realized attribution (this sim configuration)':<52} "
+          f"{'cycles':>14} {'share':>8}")
+    print("-" * 77)
     for name, cyc in [
-        ("host pack cycles",  host_pack),
-        ("host mmio cycles",  host_mmio),
-        ("DMA bank-fill cycles", bank_fill),
-        ("residual (compute + drain + serial gaps)", residual),
+        ("host pack cycles (counted)",       host_pack),
+        ("host mmio cycles (counted)",       host_mmio),
+        ("DMA bank-fill cycles (counted)",   bank_fill),
+        ("accounting residual (compute / drain / serialization "
+         "not separately attributed)", residual),
     ]:
         share = 100.0 * cyc / max(wall, 1)
-        print(f"{name:<40} {cyc:>14,} {share:>7.1f}%")
+        print(f"{name:<52} {cyc:>14,} {share:>7.1f}%")
 
     print()
-    print("The gap you see is what the analytical model cannot explain.")
-    print("The decomposition tells you which real service term dominates.")
-    print("Lane B project: pick a workload region where the residual is")
-    print("large and give a mechanism for it.")
+    print("The gap is what the analytical model cannot explain. The three")
+    print("counted buckets are direct simulator counters; the residual is")
+    print("an accounting term (what wall minus the counted buckets adds")
+    print("up to), not a measured breakdown of compute vs drain vs")
+    print("serialization. The bucket sizes are properties of THIS C++")
+    print("simulator realization and its host / MMIO configuration, not")
+    print("a universal FlexNPU physical result.")
+    print()
+    print("Lane B project: pick a workload region where the residual (or")
+    print("any counted bucket) is large and give a mechanism for it.")
 
     return 0
 

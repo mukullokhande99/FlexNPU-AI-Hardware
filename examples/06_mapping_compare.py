@@ -9,13 +9,19 @@ on the same shape set:
 The two runs differ only in the mapping / dataflow realization
 (persistence policy). Everything else — the array, the shapes, the
 dispatches — is identical. The example prints wall cycles, WGT DMA
-bytes, host cycles, and persist counters side by side.
+bytes, bank-fill cycles, host cycles, and persist counters side by
+side.
 
-The mechanism this exercises is real: `PersistPolicy` gates whether
-the WGT-DMA stream fires per dispatch. Comparing (A) and (B) shows
-which realized quantity actually moves when you change a mapping /
-dataflow decision — and which quantity stays fixed because it lives
-on a different resource path.
+Read this carefully: for the shipped MobileBERT trace under the
+default host / MMIO configuration, the two mappings end up
+wall-time equivalent but they are *not* realization equivalent —
+`persist=hit` eliminates the WGT DMA stream and cuts bank-fill work
+in half. The same system-level performance outcome does not imply
+the same realized execution behavior. That is the FlexNPU lesson
+the example is designed to expose; whether the two mappings would
+still be wall-time equivalent under a different host model, a
+different critical path, or a different workload is exactly the
+kind of question a Lane B project should investigate.
 
 Usage:
   python3 examples/06_mapping_compare.py \\
@@ -114,11 +120,15 @@ def main() -> int:
             print(f"{name:<28} {va:>18,} {vb:>18,} {delta_pct(vb, va):>10}")
 
     print()
-    print("The mapping choice moves what you'd expect it to move")
-    print("(WGT DMA bytes, persist counters). Whether it also moves")
-    print("wall cycles depends on whether WGT DMA is on the critical")
-    print("path for this workload — which is exactly the Lane B")
-    print("question the example is designed to prompt.")
+    print("The two mappings are wall-time equivalent in this")
+    print("configuration, but they are NOT realization equivalent:")
+    print("persistence eliminates weight DMA traffic and cuts")
+    print("bank-fill work without changing the current critical path.")
+    print("Same wall does not imply same realized execution — that")
+    print("is the FlexNPU lesson this example is meant to make")
+    print("concrete. Whether the wall equivalence survives under a")
+    print("different host model, a different critical path, or a")
+    print("different workload is a Lane B question worth asking.")
 
     return 0
 
