@@ -5,28 +5,32 @@
 FlexNPU is a full-stack accelerator research platform: real ONNX
 models go through graph and operator analysis, workload realization,
 analytical and cycle-level modeling, RTL, an FPGA implementation, and
-end-to-end execution on an FPGA prototype under a real
-host runtime. This repo is the **student slice** of that stack —
-enough to do real architecture- and mapping-aware research on the
-same RTL and workload shapes the platform runs.
+end-to-end execution on an FPGA prototype under a real host runtime.
+This repo is the **student-facing release** of that stack — enough
+to explore architecture / resource and mapping / dataflow questions
+using the same simulator models, RTL, and workload shapes used by
+FlexNPU.
 
 ```
     Real models / ONNX
        │
        ▼
-    operator + graph analysis                          ┐
-       │  (quantization, operator coverage, shapes)    │
-       ▼                                               │  research
-    workload realization                               │  repo
-       │  (mapping, tiling, persistence, split-K)      │
+    operator + graph analysis                          ┐  research
+       │  (quantization, operator coverage, shapes)    │  repo
        ▼                                               ┘
-    analytical / roofline modeling                     ┐
-       │                                               │
+    real workload traces
+       │
+       ▼                                               ┐
+    workload realization                               │
+       │  (mapping, tiling, persistence, split-K)      │
        ▼                                               │
-    event-driven C++ simulator                         │
-       │  (architecture + mapping + resource behavior) │  student
-       ▼                                               │  release
-    CTB mechanistic model                              │  (this repo)
+    analytical / roofline modeling                     │
+       │                                               │
+       ▼                                               │  student
+    event-driven C++ simulator                         │  release
+       │  (architecture + mapping + resource behavior) │  (this repo)
+       ▼                                               │
+    CTB mechanistic model                              │
        │  (service / buffering / bottleneck behavior)  │
        ▼                                               │
     RTL  ─────────►  optional synthesis / PPA          │
