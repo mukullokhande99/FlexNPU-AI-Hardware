@@ -23,11 +23,14 @@ module mm #(
     parameter PIPE_LAT = 1,   // latency from row_done_pulse -> first valid acc_stream_out
     // EdgeScope Stage 3C: split M and N. Default preserves legacy N.
     parameter ARRAY_M = N,
-    parameter ARRAY_N = N
+    parameter ARRAY_N = N,
+    parameter SQUARE_ENABLE = 0
 )(
     input  wire                         clk,
     input  wire                         rst,
     input  wire                         active,
+    input  wire [1:0]                   square_mode,
+    input  wire signed [5:0]            square_unit_exp,
 
     // signed inputs into mm — ain has ARRAY_M rows, bin has ARRAY_N cols
     input  wire signed [ACT_WIDTH-1:0]  ain [0:ARRAY_M-1],
@@ -156,11 +159,14 @@ module mm #(
         .ACC_WIDTH(ACC_WIDTH),
         .N(N),
         .ARRAY_M(ARRAY_M),
-        .ARRAY_N(ARRAY_N)
+        .ARRAY_N(ARRAY_N),
+        .SQUARE_ENABLE(SQUARE_ENABLE)
     ) systolic_inst (
         .clk            (clk),
         .rst            (rst),
         .en             (__active),
+        .square_mode    (square_mode),
+        .square_unit_exp(square_unit_exp),
 
         .a_in            (act_fifo_a_out),
         .b_in            (act_fifo_b_out),
