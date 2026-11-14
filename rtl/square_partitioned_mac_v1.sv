@@ -15,7 +15,10 @@
 // on left shifting / INT32 accumulator; NaR contributes zero.
 // acc_unit_exp is signed, stable for entire dot product.
 // This core is not an IEEE FP8 arithmetic implementation.
-module square_partitioned_product_v1 (
+module square_partitioned_product_v1 #(
+    parameter integer STATIC_UNIT = 0,
+    parameter signed [5:0] STATIC_UNIT_EXP = 6'sd0
+) (
     input  wire [7:0] a, b,
     input  wire [1:0] mode,
     input  wire signed [5:0] acc_unit_exp,
@@ -99,7 +102,8 @@ module square_partitioned_product_v1 (
     wire signed [4:0] exp_prod = simd ? -5'sd2 :
                                           scalar_fp4 ? e_fp4 : e_posit;
     // exp_prod [-8,8] minus acc_unit_exp [-32,31] => [-39,40].
-    wire signed [6:0] delta = $signed(exp_prod) - $signed(acc_unit_exp);
+    wire signed [5:0] selected_unit = STATIC_UNIT ? STATIC_UNIT_EXP : acc_unit_exp;
+    wire signed [6:0] delta = $signed(exp_prod) - $signed(selected_unit);
 
     assign nar = (mode==2'b00) &&
                  ((a[3:0]==4'h8)||(b[3:0]==4'h8));
@@ -118,7 +122,10 @@ module square_partitioned_product_v1 (
                        negative ? -$signed(unsigned_inc) : $signed(unsigned_inc);
 endmodule
 
-module square_partitioned_accumulator_v1 (
+module square_partitioned_accumulator_v1 #(
+    parameter integer STATIC_UNIT = 0,
+    parameter signed [5:0] STATIC_UNIT_EXP = 6'sd0
+) (
     input wire clk, rst_n, en,
     input wire [7:0] a,b,
     input wire [1:0] mode,
@@ -128,7 +135,9 @@ module square_partitioned_accumulator_v1 (
     wire signed [31:0] increment;
     wire nar;
     reg en_d;
-    square_partitioned_product_v1 u_product(
+    square_partitioned_product_v1 #(
+       .STATIC_UNIT(STATIC_UNIT), .STATIC_UNIT_EXP(STATIC_UNIT_EXP)
+    ) u_product(
         .a(a),.b(b),.mode(mode),.acc_unit_exp(acc_unit_exp),
         .increment(increment),.nar(nar)
     );
