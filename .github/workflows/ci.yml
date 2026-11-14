@@ -43,3 +43,8 @@ jobs:
 
       - name: C++ event-driven simulator — ctest
         run: make sim_core_test
+
+      - name: exploratory SQuARE MAC and 2x2 systolic tests
+        run: |
+          make square_mac_test
+          make square_array_test
