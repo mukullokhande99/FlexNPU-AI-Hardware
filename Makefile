@@ -114,3 +114,10 @@ square_v1_equiv: | $(BUILD_DIR)
 
 square_ppa:
 	@bash scripts/run_square_ppa.sh
+
+# Exhaustive independent rational oracle, not merely V0/V1 mutual equivalence.
+square_v1_oracle: | $(BUILD_DIR)
+	@python3 scripts/square_oracle_vectors.py
+	@iverilog -g2012 -s tb_square_v1_oracle -o $(BUILD_DIR)/square_v1_oracle.vvp \
+	  tb/tb_square_v1_oracle.sv rtl/square_partitioned_mac_v1.sv
+	@vvp $(BUILD_DIR)/square_v1_oracle.vvp
