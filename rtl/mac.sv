@@ -43,13 +43,17 @@ endmodule
 module mac #
 (
     parameter D_W            = 8,
-    parameter ACC_WIDTH      = 16
+    parameter ACC_WIDTH      = 16,
+    parameter SQUARE_ENABLE  = 0,
+    parameter SQUARE_V1      = 0
     // parameter PROP_DELAY     = 1   // cycles to hold before propagating
 )
 (
     input  wire                  clk,
     input  wire                  rst,
     input  wire                  en,
+    input  wire [1:0]            square_mode,
+    input  wire signed [5:0]     square_unit_exp,
     input  wire signed [D_W-1:0]        a,
     input  wire signed [D_W-1:0]        b,
     output wire signed [ACC_WIDTH-1:0]  acc,
@@ -64,17 +68,27 @@ module mac #
     reg signed [D_W-1:0] a_reg,  b_reg;
     reg           en_reg;
     // --- Core MAC computation ---
-    mac_comp #(
-        .D_W(D_W),
-        .ACC_WIDTH(ACC_WIDTH)
-    ) u_mac4 (
-        .clk(clk),
-        .rst(rst),
-        .en(en_reg),
-        .a(a),
-        .b(b),
-        .acc(acc)
-    );
+    generate
+      if (SQUARE_ENABLE && SQUARE_V1) begin : g_square_v1
+        square_partitioned_accumulator_v1 u_square_v1 (
+            .clk(clk), .rst_n(rst), .en(en_reg),
+            .a(a_reg), .b(b_reg), .mode(square_mode),
+            .acc_unit_exp(square_unit_exp), .acc(acc)
+        );
+      end else if (SQUARE_ENABLE) begin : g_square
+        // Explicit experimental mode. Requires D_W=8 and ACC_WIDTH=32.
+        square_partitioned_accumulator u_square (
+            .clk(clk), .rst_n(rst), .en(en_reg),
+            .a(a), .b(b), .mode(square_mode),
+            .acc_unit_exp(square_unit_exp), .acc(acc)
+        );
+      end else begin : g_exact
+        mac_comp #(.D_W(D_W), .ACC_WIDTH(ACC_WIDTH)) u_mac4 (
+            .clk(clk), .rst(rst), .en(en_reg),
+            .a(a), .b(b), .acc(acc)
+        );
+      end
+    endgenerate
 
     integer i;
     always @(posedge clk) begin

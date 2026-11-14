@@ -15,7 +15,7 @@ jobs:
       - name: install tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y iverilog verilator python3-pip
+          sudo apt-get install -y iverilog verilator yosys python3-pip
           python3 -m pip install --user -r requirements.txt
 
       - name: sanity — no forbidden paths or secrets
@@ -43,3 +43,21 @@ jobs:
 
       - name: C++ event-driven simulator — ctest
         run: make sim_core_test
+
+      - name: exploratory SQuARE MAC and 2x2 systolic tests
+        run: |
+          make square_mac_test
+          make square_array_test
+          make square_v1_equiv
+          make square_v1_oracle
+
+      - name: generic synthesis area/depth comparison
+        run: make square_ppa
+
+      - name: upload generic synthesis logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: square-area-depth
+          path: build/square_ppa/
+          if-no-files-found: ignore

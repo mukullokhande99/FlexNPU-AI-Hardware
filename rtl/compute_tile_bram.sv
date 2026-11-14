@@ -57,11 +57,16 @@ module compute_tile_bram #(
     parameter integer DECOUPLE_MAX          = 3,
     parameter integer SWAIT_EARLY_EXIT      = 1,
     parameter integer SWAIT_EARLY_THRESHOLD = 11,
-    parameter integer DRAIN_ISSUE_ON_RETURN = 1
+    parameter integer DRAIN_ISSUE_ON_RETURN = 1,
+    parameter integer SQUARE_ENABLE         = 0,
+    parameter integer SQUARE_V1             = 0
 )(
     input  wire                             clk,
     input  wire                             rst_n,
     input  wire                             start,
+    // Experimental low-precision format control, stable per dispatch.
+    input  wire [1:0]                       i_square_mode,
+    input  wire signed [5:0]                i_square_unit_exp,
     input  wire [$clog2(MAX_K+1)-1:0]       K_total,
 
     // Cross-dispatch K-accumulate control (sampled at start pulse).
@@ -154,6 +159,18 @@ module compute_tile_bram #(
 
     wire                         act_ready, wgt_ready, out_ready;
 
+    reg [1:0] square_mode_q;
+    reg signed [5:0] square_unit_exp_q;
+    always @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            square_mode_q <= 2'b00;
+            square_unit_exp_q <= 6'sd0;
+        end else if (start) begin
+            square_mode_q <= i_square_mode;
+            square_unit_exp_q <= i_square_unit_exp;
+        end
+    end
+
     mm #(
         .ACT_WIDTH      (ACT_WIDTH),
         .ACC_WIDTH      (ACC_WIDTH),
@@ -163,11 +180,15 @@ module compute_tile_bram #(
         .OUT_FIFO_DEPTH (OUT_FIFO_DEPTH),
         .PIPE_LAT       (PIPE_LAT),
         .ARRAY_M        (ARRAY_M),
-        .ARRAY_N        (ARRAY_N)
+        .ARRAY_N        (ARRAY_N),
+        .SQUARE_ENABLE   (SQUARE_ENABLE),
+        .SQUARE_V1       (SQUARE_V1)
     ) u_mm (
         .clk       (clk),
         .rst       (mm_rst_n),
         .active    (mm_active),
+        .square_mode(square_mode_q),
+        .square_unit_exp(square_unit_exp_q),
         .ain       (mm_ain),
         .bin       (mm_bin),
         .wr_en_act (mm_wr_en_act),
