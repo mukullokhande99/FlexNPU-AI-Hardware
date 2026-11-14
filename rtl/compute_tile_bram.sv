@@ -58,7 +58,8 @@ module compute_tile_bram #(
     parameter integer SWAIT_EARLY_EXIT      = 1,
     parameter integer SWAIT_EARLY_THRESHOLD = 11,
     parameter integer DRAIN_ISSUE_ON_RETURN = 1,
-    parameter integer SQUARE_ENABLE         = 0
+    parameter integer SQUARE_ENABLE         = 0,
+    parameter integer SQUARE_V1             = 0
 )(
     input  wire                             clk,
     input  wire                             rst_n,
@@ -180,7 +181,8 @@ module compute_tile_bram #(
         .PIPE_LAT       (PIPE_LAT),
         .ARRAY_M        (ARRAY_M),
         .ARRAY_N        (ARRAY_N),
-        .SQUARE_ENABLE   (SQUARE_ENABLE)
+        .SQUARE_ENABLE   (SQUARE_ENABLE),
+        .SQUARE_V1       (SQUARE_V1)
     ) u_mm (
         .clk       (clk),
         .rst       (mm_rst_n),
