@@ -49,6 +49,7 @@ jobs:
           make square_mac_test
           make square_array_test
           make square_v1_equiv
+          make square_v1_oracle
 
       - name: generic synthesis area/depth comparison
         run: make square_ppa
