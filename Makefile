@@ -12,7 +12,7 @@ PY         ?= python3
 CONFIG     ?= configs/ctb/baseline.yaml
 K          ?= 1024
 
-.PHONY: help check onboarding ctb_correctness ctb_eval regime_walk parity workload_replay pytest sim_core sim_core_test clean
+.PHONY: square_mac_test square_array_test help check onboarding ctb_correctness ctb_eval regime_walk parity workload_replay pytest sim_core sim_core_test clean
 
 help:
 	@echo "FlexNPU-AI-Hardware — student targets"
@@ -94,3 +94,14 @@ sim_core_test: sim_core
 
 clean:
 	@rm -rf $(BUILD_DIR) simulator/core/build
+
+# --- Experimental SQuARE shared INT32 low-precision MAC ---
+square_mac_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_partitioned_mac -o $(BUILD_DIR)/square_mac.vvp \
+	  tb/tb_square_partitioned_mac.sv rtl/square_partitioned_mac.sv
+	@vvp $(BUILD_DIR)/square_mac.vvp
+
+square_array_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_array -o $(BUILD_DIR)/square_array.vvp \
+	  tb/tb_square_array.sv rtl/square_partitioned_mac.sv rtl/mac.sv rtl/systolic.sv
+	@vvp $(BUILD_DIR)/square_array.vvp
