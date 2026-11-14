@@ -36,9 +36,10 @@ The 32-bit left-shift output is still required for large positive unit-adjusted 
 make square_mac_test       # V0 directed numerical test
 make square_array_test     # 2x2 V0 systolic integration
 make square_v1_equiv       # V0/V1 exhaustive encoded inputs + 10 unit scales
+make square_v1_oracle      # V1 against independent exact-rational oracle
 make square_ppa            # requires yosys; produces build/square_ppa logs/report
 ```
-`make square_v1_equiv` compares 256 Posit code pairs, 256 FP4 code pairs, and all 64x64 packed independent dual FP2 code pairs for each of E1M0/E0M1 at ten unit exponents, giving 87,040 comparisons. This checks two RTL implementations against each other, **not independently against a mathematical oracle**, and does not establish application-level accuracy.
+`make square_v1_equiv` compares 256 Posit code pairs, 256 FP4 code pairs, and all 64x64 packed independent dual FP2 code pairs for each of E1M0/E0M1 at ten unit exponents, giving 87,040 comparisons. The separate `make square_v1_oracle` target generates 87,040 oracle vectors using exact Python rational arithmetic and compares V1's RTL output to them. This checks the specified per-issue truncation policy independently, but does not establish application-level neural-network accuracy.
 
 `make square_ppa` maps each top module to Yosys generic Boolean cells and obtains the `ltp -noff` longest topological path. Both are **architecture proxies**, not µm², ns, MHz, power, or energy. The signed INT8 baseline includes an 8x8 multiplier and so is not numerically equivalent to FP2/FP4/Posit modes: compare it as a resource reference, not bit-exact arithmetic competitor. For credible hardware PPA, use an identical target technology, constraints, clock, power methodology, and reporting conventions.
 
