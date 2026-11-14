@@ -72,7 +72,7 @@ module mac #
       if (SQUARE_ENABLE && SQUARE_V1) begin : g_square_v1
         square_partitioned_accumulator_v1 u_square_v1 (
             .clk(clk), .rst_n(rst), .en(en_reg),
-            .a(a), .b(b), .mode(square_mode),
+            .a(a_reg), .b(b_reg), .mode(square_mode),
             .acc_unit_exp(square_unit_exp), .acc(acc)
         );
       end else if (SQUARE_ENABLE) begin : g_square
