@@ -23,11 +23,14 @@ module systolic_array #(
     parameter N          = 2,
     // EdgeScope Stage 3C: split M and N. Default preserves legacy N.
     parameter ARRAY_M    = N,
-    parameter ARRAY_N    = N
+    parameter ARRAY_N    = N,
+    parameter SQUARE_ENABLE = 0
 )(
     input  wire                    clk,
     input  wire                    rst,
     input  wire                    en,
+    input  wire [1:0]              square_mode,
+    input  wire signed [5:0]       square_unit_exp,
 
     input  wire signed [D_W-1:0]          a_in [0:ARRAY_M-1],
     input  wire signed [D_W-1:0]          b_in [0:ARRAY_N-1],
@@ -62,11 +65,14 @@ module systolic_array #(
             for (c = 0; c < ARRAY_N; c = c + 1) begin : col
                 mac #(
                     .D_W(D_W),
-                    .ACC_WIDTH(ACC_WIDTH)
+                    .ACC_WIDTH(ACC_WIDTH),
+                    .SQUARE_ENABLE(SQUARE_ENABLE)
                 ) pe (
                     .clk(clk),
                     .rst(rst),
                     .en(en_sig[r][c]),
+                    .square_mode(square_mode),
+                    .square_unit_exp(square_unit_exp),
                     .a(a_sig[r][c]),
                     .b(b_sig[r][c]),
                     .acc(c_out[r][c]),
