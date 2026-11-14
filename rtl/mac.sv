@@ -44,7 +44,8 @@ module mac #
 (
     parameter D_W            = 8,
     parameter ACC_WIDTH      = 16,
-    parameter SQUARE_ENABLE  = 0
+    parameter SQUARE_ENABLE  = 0,
+    parameter SQUARE_V1      = 0
     // parameter PROP_DELAY     = 1   // cycles to hold before propagating
 )
 (
@@ -68,7 +69,13 @@ module mac #
     reg           en_reg;
     // --- Core MAC computation ---
     generate
-      if (SQUARE_ENABLE) begin : g_square
+      if (SQUARE_ENABLE && SQUARE_V1) begin : g_square_v1
+        square_partitioned_accumulator_v1 u_square_v1 (
+            .clk(clk), .rst_n(rst), .en(en_reg),
+            .a(a), .b(b), .mode(square_mode),
+            .acc_unit_exp(square_unit_exp), .acc(acc)
+        );
+      end else if (SQUARE_ENABLE) begin : g_square
         // Explicit experimental mode. Requires D_W=8 and ACC_WIDTH=32.
         square_partitioned_accumulator u_square (
             .clk(clk), .rst_n(rst), .en(en_reg),
