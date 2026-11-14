@@ -105,3 +105,12 @@ square_array_test: | $(BUILD_DIR)
 	@iverilog -g2012 -s tb_square_array -o $(BUILD_DIR)/square_array.vvp \
 	  tb/tb_square_array.sv rtl/square_partitioned_mac.sv rtl/mac.sv rtl/systolic.sv
 	@vvp $(BUILD_DIR)/square_array.vvp
+
+# Exploratory V1 equivalence and technology-independent area-depth study.
+square_v1_equiv: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_v0_v1_equivalence -o $(BUILD_DIR)/square_v1_equiv.vvp \
+	  tb/tb_square_v0_v1_equivalence.sv rtl/square_partitioned_mac.sv rtl/square_partitioned_mac_v1.sv
+	@vvp $(BUILD_DIR)/square_v1_equiv.vvp
+
+square_ppa:
+	@bash scripts/run_square_ppa.sh
