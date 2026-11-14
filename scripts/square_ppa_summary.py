@@ -4,7 +4,7 @@ NOTE: Generic gate counts and longest topological path are NOT PDK area/ns.
 """
 import re, json, pathlib, sys
 results=[]
-for name in ("int8","square_v0","square_v1"):
+for name in ("int8","square_v0","square_v1","square_v1_static"):
     p=pathlib.Path("build/square_ppa")/(name+".log")
     if not p.exists():
         print(f"missing {p}",file=sys.stderr);sys.exit(2)
