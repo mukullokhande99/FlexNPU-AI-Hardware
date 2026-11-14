@@ -24,7 +24,8 @@ module systolic_array #(
     // EdgeScope Stage 3C: split M and N. Default preserves legacy N.
     parameter ARRAY_M    = N,
     parameter ARRAY_N    = N,
-    parameter SQUARE_ENABLE = 0
+    parameter SQUARE_ENABLE = 0,
+    parameter SQUARE_V1 = 0
 )(
     input  wire                    clk,
     input  wire                    rst,
@@ -66,7 +67,8 @@ module systolic_array #(
                 mac #(
                     .D_W(D_W),
                     .ACC_WIDTH(ACC_WIDTH),
-                    .SQUARE_ENABLE(SQUARE_ENABLE)
+                    .SQUARE_ENABLE(SQUARE_ENABLE),
+                    .SQUARE_V1(SQUARE_V1)
                 ) pe (
                     .clk(clk),
                     .rst(rst),
