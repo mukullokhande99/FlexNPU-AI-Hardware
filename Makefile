@@ -129,13 +129,13 @@ square_fifo_test: | $(BUILD_DIR)
 	@vvp $(BUILD_DIR)/fifo_boundary.vvp
 
 square_ctb_test: | $(BUILD_DIR)
-	@set -e; for v in 0 1; do \
+	@set -e; for n in 2 8 16; do for v in 0 1; do \
 	  verilator --cc --exe --build -Wno-fatal -Wno-PINMISSING --top-module compute_tile_bram \
-	    -GSQUARE_ENABLE=1 -GSQUARE_V1=$$v -Mdir $(BUILD_DIR)/square_ctb_$$v -j 4 \
+	    -GN=$$n -GSQUARE_ENABLE=1 -GSQUARE_V1=$$v -Mdir $(BUILD_DIR)/square_ctb_$${n}_$$v -j 4 \
 	    $(RTL_ABS) $(REPO)/rtl/square_partitioned_mac.sv $(REPO)/rtl/square_partitioned_mac_v1.sv \
-	    $(REPO)/tb/ctb_square_correctness.cpp -CFLAGS "-O2" --no-timing; \
-	  $(BUILD_DIR)/square_ctb_$$v/Vcompute_tile_bram; \
-	done
+	    $(REPO)/tb/ctb_square_correctness.cpp -CFLAGS "-O2 -DCTB_N=$$n" --no-timing; \
+	  $(BUILD_DIR)/square_ctb_$${n}_$$v/Vcompute_tile_bram; \
+	done; done
 
 square_gate: square_mac_test square_array_test square_v1_equiv square_v1_oracle square_fifo_test square_ctb_test
 

@@ -38,23 +38,28 @@ make square_mac_test
 This runs a directed standalone Icarus testbench for scalar, SIMD, NaR and accumulator reset. **This is an exploratory implementation, not validated as full end-to-end FlexNPU GEMM.** The original compute pipeline uses an enable delay and a conservative drain timing model, and the new precision path needs integration-level skew/flow tests and cross-dispatch numerical checks.
 
 ## Research next steps
-1. Independently enumerate all 16 x 16 scalar code pairs and FP2 packed lane combinations against a numeric reference.
-2. Add FP2 zero-flag and NaR propagation tests through a 2x2 array and full CTB writeback.
+1. Maintain the exhaustive rational oracle and expand system-level data patterns.
+2. Extend FP2 zero-flag and NaR coverage at array and CTB writeback; NaR status is not exported by the CTB.
 3. Compare against an exact separated-format design under identical synthesis/STA constraints. Two 2x2 multiplier cells and control logic have measurable cost; **zero SIMD overhead is not assumed**.
 4. Test overflow and numerical loss for layer-dependent unit scaling.
 5. Re-anchor C++ / Python timing models after changes to PE critical path or pipeline latency; no automatic speedup claim.
-6. Harden the existing `fifo.sv` for simultaneous accepted push/pop and non-power-of-two depths before broader DSE.
+6. Expand FIFO stress testing beyond the directed boundary and non-power-of-two depth regression.
 
 ## Scope
 Experimental hardware research only; no modifications to the default branch or legacy MAC numerical behavior.
 
 
 ## Integration regression (draft)
-`make square_gate` adds FIFO boundary, streaming MAC, and encoded 8x8 CTB
+`make square_gate` adds FIFO boundary, streaming MAC, and encoded 2x2, 8x8 and 16x16 CTB
 writeback comparisons for V0 and V1 to the existing arithmetic checks.
-The CTB reference exercises all four modes at unit exponent -4, including
+The CTB reference exercises all four modes at unit exponents -8, -4, 0 and 4, including
 single and chained dispatches, and changes the input controls after start to
-check latching. These tests are a merge gate only after they actually pass;
+check latching, including ignored start pulses while busy. Tests must pass on the actual PR head;
 they do not establish target PPA, application accuracy, arbitrary backpressure,
 or correctness for all sizes and scales. The FIFO accepts only a write on a
 simultaneous request when empty, and only a read when full (no bypass).
+
+The current CTB requires `ACT_FIFO_DEPTH >= K_TILE` when SQuARE is enabled.
+A smaller input FIFO can stall the BRAM return path because it has no skid
+buffer; a simulation-time guard rejects that unsupported configuration.
+This is a restriction, not a fix for arbitrary input backpressure.

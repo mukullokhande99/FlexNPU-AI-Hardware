@@ -159,13 +159,21 @@ module compute_tile_bram #(
 
     wire                         act_ready, wgt_ready, out_ready;
 
+`ifndef SYNTHESIS
+    // The current BRAM-to-input-FIFO path has no skid buffer for a
+    // returned word when the FIFO becomes full. Restrict SQuARE to a
+    // complete K tile until that path supports arbitrary backpressure.
+    initial if (SQUARE_ENABLE && ACT_FIFO_DEPTH < K_TILE)
+        $fatal(1, "SQuARE requires ACT_FIFO_DEPTH >= K_TILE");
+`endif
+
     reg [1:0] square_mode_q;
     reg signed [5:0] square_unit_exp_q;
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             square_mode_q <= 2'b00;
             square_unit_exp_q <= 6'sd0;
-        end else if (start) begin
+        end else if (start && state == S_IDLE) begin
             square_mode_q <= i_square_mode;
             square_unit_exp_q <= i_square_unit_exp;
         end

@@ -33,8 +33,9 @@ module tb_square_v1_oracle;
             else if (!$feof(fd)) $fatal(1,"Malformed oracle vector file");
         end
         $fclose(fd);
-        if (count!=87040) $fatal(1,"Wrong vector count %0d",count);
+        if (count!=557056) $fatal(1,"Wrong vector count %0d",count);
         $display("PASS V1 vs independent exact-rational oracle: %0d vectors",count);
         $finish;
     end
 endmodule
+

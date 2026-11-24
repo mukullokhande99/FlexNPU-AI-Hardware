@@ -13,7 +13,7 @@ POS = {
     12: Fraction(-1), 13: Fraction(-1,2), 14: Fraction(-1,4),
     15: Fraction(-1,16),
 }
-UNITS=(-32,-12,-8,-4,-2,0,1,4,12,31)
+UNITS=range(-32,32)
 def fp4(x):
     sign=-1 if x&8 else 1
     exp=(x>>1)&3
@@ -55,6 +55,7 @@ def main():
                         x=trunc0(term/(Fraction(2)**exp)) & 0xFFFFFFFF
                         f.write(f'{mode} {a:02x} {b:02x} {exp} {x:08x} {nar}\n')
                         n+=1
-    assert n==87040,n
+    assert n==557056,n
     print(f'generated {n} independent arithmetic vectors: {out}')
 if __name__=='__main__': main()
+
