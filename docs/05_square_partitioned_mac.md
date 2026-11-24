@@ -47,3 +47,14 @@ This runs a directed standalone Icarus testbench for scalar, SIMD, NaR and accum
 
 ## Scope
 Experimental hardware research only; no modifications to the default branch or legacy MAC numerical behavior.
+
+
+## Integration regression (draft)
+`make square_gate` adds FIFO boundary, streaming MAC, and encoded 8x8 CTB
+writeback comparisons for V0 and V1 to the existing arithmetic checks.
+The CTB reference exercises all four modes at unit exponent -4, including
+single and chained dispatches, and changes the input controls after start to
+check latching. These tests are a merge gate only after they actually pass;
+they do not establish target PPA, application accuracy, arbitrary backpressure,
+or correctness for all sizes and scales. The FIFO accepts only a write on a
+simultaneous request when empty, and only a read when full (no bypass).

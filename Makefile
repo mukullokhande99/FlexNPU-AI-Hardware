@@ -121,3 +121,27 @@ square_v1_oracle: | $(BUILD_DIR)
 	@iverilog -g2012 -s tb_square_v1_oracle -o $(BUILD_DIR)/square_v1_oracle.vvp \
 	  tb/tb_square_v1_oracle.sv rtl/square_partitioned_mac_v1.sv
 	@vvp $(BUILD_DIR)/square_v1_oracle.vvp
+
+
+.PHONY: square_fifo_test square_ctb_test square_gate
+square_fifo_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_fifo_boundary -o $(BUILD_DIR)/fifo_boundary.vvp tb/tb_fifo_boundary.sv rtl/fifo.sv
+	@vvp $(BUILD_DIR)/fifo_boundary.vvp
+
+square_ctb_test: | $(BUILD_DIR)
+	@set -e; for v in 0 1; do \
+	  verilator --cc --exe --build -Wno-fatal -Wno-PINMISSING --top-module compute_tile_bram \
+	    -GSQUARE_ENABLE=1 -GSQUARE_V1=$$v -Mdir $(BUILD_DIR)/square_ctb_$$v -j 4 \
+	    $(RTL_ABS) $(REPO)/rtl/square_partitioned_mac.sv $(REPO)/rtl/square_partitioned_mac_v1.sv \
+	    $(REPO)/tb/ctb_square_correctness.cpp -CFLAGS "-O2" --no-timing; \
+	  $(BUILD_DIR)/square_ctb_$$v/Vcompute_tile_bram; \
+	done
+
+square_gate: square_mac_test square_array_test square_v1_equiv square_v1_oracle square_fifo_test square_ctb_test
+
+.PHONY: square_stream_test
+square_stream_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_mac_stream -o $(BUILD_DIR)/square_stream.vvp \
+	  tb/tb_square_mac_stream.sv rtl/mac.sv rtl/square_partitioned_mac.sv rtl/square_partitioned_mac_v1.sv
+	@vvp $(BUILD_DIR)/square_stream.vvp
+square_gate: square_stream_test

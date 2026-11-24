@@ -50,6 +50,9 @@ jobs:
           make square_array_test
           make square_v1_equiv
           make square_v1_oracle
+          make square_fifo_test
+          make square_stream_test
+          make square_ctb_test
 
       - name: generic synthesis area/depth comparison
         run: make square_ppa
@@ -61,3 +64,4 @@ jobs:
           name: square-area-depth
           path: build/square_ppa/
           if-no-files-found: ignore
+

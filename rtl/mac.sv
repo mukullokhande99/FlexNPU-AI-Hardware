@@ -72,7 +72,7 @@ module mac #
       if (SQUARE_ENABLE && SQUARE_V1) begin : g_square_v1
         square_partitioned_accumulator_v1 u_square_v1 (
             .clk(clk), .rst_n(rst), .en(en_reg),
-            .a(a_reg), .b(b_reg), .mode(square_mode),
+            .a(a), .b(b), .mode(square_mode),
             .acc_unit_exp(square_unit_exp), .acc(acc)
         );
       end else if (SQUARE_ENABLE) begin : g_square
@@ -89,6 +89,11 @@ module mac #
         );
       end
     endgenerate
+
+`ifndef SYNTHESIS
+    initial if (SQUARE_ENABLE && (D_W != 8 || ACC_WIDTH != 32))
+        $fatal(1, "SQuARE requires D_W=8 and ACC_WIDTH=32");
+`endif
 
     integer i;
     always @(posedge clk) begin
@@ -109,3 +114,4 @@ module mac #
     assign en_out = en_reg;
 
 endmodule
+
