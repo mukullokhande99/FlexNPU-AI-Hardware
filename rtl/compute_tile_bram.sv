@@ -159,13 +159,12 @@ module compute_tile_bram #(
 
     wire                         act_ready, wgt_ready, out_ready;
 
-`ifndef SYNTHESIS
-    // The current BRAM-to-input-FIFO path has no skid buffer for a
-    // returned word when the FIFO becomes full. Restrict SQuARE to a
-    // complete K tile until that path supports arbitrary backpressure.
-    initial if (SQUARE_ENABLE && ACT_FIFO_DEPTH < K_TILE)
-        $fatal(1, "SQuARE requires ACT_FIFO_DEPTH >= K_TILE");
-`endif
+    // The streaming array cannot pause mid-dot-product: each PE treats
+    // an enable gap as the end of a pass. Reserve at least a complete
+    // K tile in each input FIFO for the experimental SQuARE path.
+    // ACT_FIFO_DEPTH is therefore a minimum, not an exact physical depth.
+    localparam integer EFFECTIVE_ACT_FIFO_DEPTH =
+        (SQUARE_ENABLE && ACT_FIFO_DEPTH < K_TILE) ? K_TILE : ACT_FIFO_DEPTH;
 
     reg [1:0] square_mode_q;
     reg signed [5:0] square_unit_exp_q;
@@ -184,7 +183,7 @@ module compute_tile_bram #(
         .ACC_WIDTH      (ACC_WIDTH),
         .N              (N),
         .K              (K_TILE),
-        .ACT_FIFO_DEPTH (ACT_FIFO_DEPTH),
+        .ACT_FIFO_DEPTH (EFFECTIVE_ACT_FIFO_DEPTH),
         .OUT_FIFO_DEPTH (OUT_FIFO_DEPTH),
         .PIPE_LAT       (PIPE_LAT),
         .ARRAY_M        (ARRAY_M),

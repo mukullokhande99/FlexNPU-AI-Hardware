@@ -59,7 +59,8 @@ they do not establish target PPA, application accuracy, arbitrary backpressure,
 or correctness for all sizes and scales. The FIFO accepts only a write on a
 simultaneous request when empty, and only a read when full (no bypass).
 
-The current CTB requires `ACT_FIFO_DEPTH >= K_TILE` when SQuARE is enabled.
-A smaller input FIFO can stall the BRAM return path because it has no skid
-buffer; a simulation-time guard rejects that unsupported configuration.
-This is a restriction, not a fix for arbitrary input backpressure.
+For SQuARE, `ACT_FIFO_DEPTH` is a minimum: the actual input FIFO depth is
+`max(ACT_FIFO_DEPTH, K_TILE)`. This preserves continuous issue for a whole K
+tile and avoids the known deadlock when a smaller FIFO is requested. It uses
+additional physical storage and does not implement arbitrary backpressure or
+an exact-depth-two FIFO. The legacy path retains its configured depth.

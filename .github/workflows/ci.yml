@@ -53,6 +53,7 @@ jobs:
           make square_fifo_test
           make square_stream_test
           make square_ctb_test
+          make square_ctb_small_fifo_test
 
       - name: generic synthesis area/depth comparison
         run: make square_ppa
