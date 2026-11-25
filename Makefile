@@ -12,7 +12,7 @@ PY         ?= python3
 CONFIG     ?= configs/ctb/baseline.yaml
 K          ?= 1024
 
-.PHONY: help check onboarding ctb_correctness ctb_eval regime_walk parity workload_replay pytest sim_core sim_core_test clean
+.PHONY: square_mac_test square_array_test help check onboarding ctb_correctness ctb_eval regime_walk parity workload_replay pytest sim_core sim_core_test clean
 
 help:
 	@echo "FlexNPU-AI-Hardware — student targets"
@@ -94,3 +94,66 @@ sim_core_test: sim_core
 
 clean:
 	@rm -rf $(BUILD_DIR) simulator/core/build
+
+# --- Experimental SQuARE shared INT32 low-precision MAC ---
+square_mac_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_partitioned_mac -o $(BUILD_DIR)/square_mac.vvp \
+	  tb/tb_square_partitioned_mac.sv rtl/square_partitioned_mac.sv
+	@vvp $(BUILD_DIR)/square_mac.vvp
+
+square_array_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_array -o $(BUILD_DIR)/square_array.vvp \
+	  tb/tb_square_array.sv rtl/square_partitioned_mac.sv rtl/mac.sv rtl/systolic.sv
+	@vvp $(BUILD_DIR)/square_array.vvp
+
+# Exploratory V1 equivalence and technology-independent area-depth study.
+square_v1_equiv: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_v0_v1_equivalence -o $(BUILD_DIR)/square_v1_equiv.vvp \
+	  tb/tb_square_v0_v1_equivalence.sv rtl/square_partitioned_mac.sv rtl/square_partitioned_mac_v1.sv
+	@vvp $(BUILD_DIR)/square_v1_equiv.vvp
+
+square_ppa:
+	@bash scripts/run_square_ppa.sh
+
+# Exhaustive independent rational oracle, not merely V0/V1 mutual equivalence.
+square_v1_oracle: | $(BUILD_DIR)
+	@python3 scripts/square_oracle_vectors.py
+	@iverilog -g2012 -s tb_square_v1_oracle -o $(BUILD_DIR)/square_v1_oracle.vvp \
+	  tb/tb_square_v1_oracle.sv rtl/square_partitioned_mac_v1.sv
+	@vvp $(BUILD_DIR)/square_v1_oracle.vvp
+
+
+.PHONY: square_fifo_test square_ctb_test square_gate
+square_fifo_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_fifo_boundary -o $(BUILD_DIR)/fifo_boundary.vvp tb/tb_fifo_boundary.sv rtl/fifo.sv
+	@vvp $(BUILD_DIR)/fifo_boundary.vvp
+
+square_ctb_test: | $(BUILD_DIR)
+	@set -e; for n in 2 8 16; do for v in 0 1; do \
+	  verilator --cc --exe --build -Wno-fatal -Wno-PINMISSING --top-module compute_tile_bram \
+	    -GN=$$n -GSQUARE_ENABLE=1 -GSQUARE_V1=$$v -Mdir $(BUILD_DIR)/square_ctb_$${n}_$$v -j 4 \
+	    $(RTL_ABS) $(REPO)/rtl/square_partitioned_mac.sv $(REPO)/rtl/square_partitioned_mac_v1.sv \
+	    $(REPO)/tb/ctb_square_correctness.cpp -CFLAGS "-O2 -DCTB_N=$$n" --no-timing; \
+	  $(BUILD_DIR)/square_ctb_$${n}_$$v/Vcompute_tile_bram; \
+	done; done
+
+square_gate: square_mac_test square_array_test square_v1_equiv square_v1_oracle square_fifo_test square_ctb_test
+
+.PHONY: square_stream_test
+square_stream_test: | $(BUILD_DIR)
+	@iverilog -g2012 -s tb_square_mac_stream -o $(BUILD_DIR)/square_stream.vvp \
+	  tb/tb_square_mac_stream.sv rtl/mac.sv rtl/square_partitioned_mac.sv rtl/square_partitioned_mac_v1.sv
+	@vvp $(BUILD_DIR)/square_stream.vvp
+square_gate: square_stream_test
+
+.PHONY: square_ctb_small_fifo_test
+square_ctb_small_fifo_test: | $(BUILD_DIR)
+	@set -e; for n in 2 8; do for d in 2 3; do for v in 0 1; do \
+	  verilator --cc --exe --build -Wno-fatal -Wno-PINMISSING --top-module compute_tile_bram \
+	    -GN=$$n -GACT_FIFO_DEPTH=$$d -GSQUARE_ENABLE=1 -GSQUARE_V1=$$v \
+	    -Mdir $(BUILD_DIR)/square_small_$${n}_$${d}_$$v -j 4 \
+	    $(RTL_ABS) $(REPO)/rtl/square_partitioned_mac.sv $(REPO)/rtl/square_partitioned_mac_v1.sv \
+	    $(REPO)/tb/ctb_square_correctness.cpp -CFLAGS "-O2 -DCTB_N=$$n" --no-timing; \
+	  $(BUILD_DIR)/square_small_$${n}_$${d}_$$v/Vcompute_tile_bram; \
+	done; done; done
+square_gate: square_ctb_small_fifo_test
